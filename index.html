@@ -2,21 +2,22 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SEYDIOS | Biyoloji Lab</title>
-    <!-- Chart.js & Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ===== ORTAK VE ÖĞRENCİ STİLLERİ ===== */
         :root {
-            --bg: #050507; --sidebar: #0d0d10; --card: #141418;
+            --bg: #050507; --sidebar: #0d0d0f10; --card: #141418;
             --accent: #00f2ff;
             --text: #e2e8f0; --border: #26262b;
             --success: #00ff88; --danger: #ff4d4d; --warning: #ffb100;
             --kritik: #ff0055;
         }
+
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+        /* APK SCROLL FIX */
         html, body {
             height: 100%;
             overscroll-behavior: none;
@@ -25,36 +26,30 @@
         }
         body { background-color: var(--bg); color: var(--text); height: 100%; display: flex; overflow: hidden; }
 
-        /* ===== ROL SEÇİM EKRANI (GİRİŞ ÖNCESİ) ===== */
-        #roleSelectionOverlay {
-            position: fixed; inset: 0; background: rgba(5,5,7,0.98);
+        /* ===== ROL SEÇİMİ VE GİRİŞ ===== */
+        #roleSelection {
+            position: fixed; inset: 0; background: rgba(5,5,7,0.97);
             display: flex; align-items: center; justify-content: center;
             z-index: 10000; overflow-y: auto;
         }
         .role-box {
             background: var(--card); border: 1px solid var(--accent);
-            border-radius: 24px; padding: 40px 35px; width: 380px; max-width: 90vw;
-            box-shadow: 0 0 50px rgba(0,242,255,0.15);
-            text-align: center;
+            border-radius: 20px; padding: 40px 35px; width: 400px; max-width: 95vw;
+            box-shadow: 0 0 40px rgba(0,242,255,0.15);
         }
-        .role-box h1 { color: var(--accent); font-size: 28px; letter-spacing: 5px; margin-bottom: 4px; }
-        .role-box .subtitle { color: var(--success); font-size: 12px; font-weight: bold; letter-spacing: 2px; margin-bottom: 30px; }
-        .role-buttons { display: flex; flex-direction: column; gap: 16px; }
+        .role-box h2 { color: var(--accent); text-align: center; font-size: 24px; letter-spacing: 4px; margin-bottom: 8px; }
+        .role-box .subtitle { color: #00ff88; text-align: center; font-size: 12px; font-weight: bold; letter-spacing: 2px; margin-bottom: 30px; }
+        .role-buttons { display: flex; gap: 15px; flex-direction: column; }
         .role-btn {
-            background: transparent; border: 2px solid var(--accent);
-            color: var(--accent); padding: 18px 20px; border-radius: 16px;
-            font-size: 20px; font-weight: 900; cursor: pointer;
-            transition: all 0.2s; letter-spacing: 2px;
-            box-shadow: 0 0 15px rgba(0,242,255,0.1);
+            width: 100%; padding: 20px; background: rgba(0,242,255,0.05); border: 2px solid var(--border);
+            border-radius: 12px; color: var(--text); font-weight: 900; font-size: 16px;
+            cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px;
         }
-        .role-btn:hover { background: var(--accent); color: #000; }
-        .role-btn.teacher { border-color: var(--warning); color: var(--warning); }
-        .role-btn.teacher:hover { background: var(--warning); color: #000; }
+        .role-btn:hover { border-color: var(--accent); background: rgba(0,242,255,0.1); transform: translateY(-2px); }
 
-        /* ===== ÖĞRENCİ GİRİŞ/KAYIT OVERLAY ===== */
-        #studentAuthOverlay {
+        #registerOverlay {
             position: fixed; inset: 0; background: rgba(5,5,7,0.97);
-            display: flex; align-items: center; justify-content: center;
+            display: none; align-items: center; justify-content: center;
             z-index: 9999; overflow-y: auto;
         }
         .register-box {
@@ -78,6 +73,12 @@
             cursor: pointer; margin-top: 8px; letter-spacing: 1px; transition: opacity 0.2s;
         }
         .btn-register:hover { opacity: 0.85; }
+        .btn-back {
+            width: 100%; padding: 12px; background: transparent; border: 1px solid var(--border);
+            border-radius: 10px; color: var(--text); font-weight: 600; font-size: 13px;
+            cursor: pointer; margin-top: 10px; transition: all 0.2s;
+        }
+        .btn-back:hover { border-color: var(--accent); }
         #regError { color: var(--danger); font-size: 11px; text-align: center; margin-top: 8px; min-height: 16px; }
         .auth-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
         .auth-tab {
@@ -88,7 +89,7 @@
         .auth-tab.active { background: var(--accent); color: #000; border-color: var(--accent); }
         .hidden { display: none !important; }
 
-        /* ===== ÖĞRENCİ ANA PANEL (AYT_BİYOLOJİ) ===== */
+        /* ===== ÖĞRENCİ SİSTEMİ STILLERI ===== */
         #floatBar {
             position: fixed; bottom: 20px; right: 20px;
             display: flex; align-items: center; gap: 10px; z-index: 500;
@@ -177,372 +178,399 @@
             text-align: center; margin-top: 10px; border: 1px solid var(--border);
         }
 
-        .topic-row {
-            display: grid; grid-template-columns: 1fr auto auto 130px; gap: 10px;
-            align-items: center; padding: 12px; border-bottom: 1px solid #1e1e24; transition: 0.2s;
+        .topic-section { margin-bottom: 20px; }
+        .section-header {
+            background: linear-gradient(90deg, rgba(0,242,255,0.1), transparent);
+            padding: 12px 15px; border-radius: 8px; border-left: 3px solid var(--accent);
+            font-weight: bold; font-size: 13px; margin-bottom: 10px; display: flex;
+            justify-content: space-between; align-items: center;
         }
-        .topic-row:hover { background: #1a1a20; }
-        .topic-name { font-size: 13px; }
-        .kritik-tag {
-            background: var(--kritik); color: white; font-size: 9px;
-            padding: 2px 6px; border-radius: 4px; font-weight: 900; margin-right: 5px;
-        }
-        .net-yield { color: var(--accent); font-size: 10px; font-weight: bold; }
-        .btn-meb {
-            background: transparent; border: 1px solid #555; color: #555;
-            font-size: 10px; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;
-        }
-        .btn-meb.active { background: var(--success); color: #000; border-color: var(--success); }
-        select {
-            background: #000; color: var(--text); border: 1px solid var(--border);
-            padding: 6px; border-radius: 6px; font-size: 11px; outline: none;
-        }
-        select.master { color: var(--success); font-weight: bold; border-color: var(--success); }
+        .section-kritik { border-left-color: var(--kritik); background: linear-gradient(90deg, rgba(255,0,85,0.1), transparent); }
 
-        .d-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 10px; align-items: center; font-size: 12px; font-weight: bold; }
-        .d-row input, .d-row select {
+        .topic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+        .topic-card {
+            background: rgba(255,255,255,0.02); padding: 12px 14px; border-radius: 8px;
+            border: 1px solid var(--border); cursor: pointer; transition: 0.2s;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .topic-card:hover { background: rgba(255,255,255,0.05); border-color: var(--accent); transform: translateY(-2px); }
+        .topic-name { font-size: 12px; font-weight: 600; }
+        .topic-icons { display: flex; gap: 4px; }
+        .status-icon {
+            width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; cursor: pointer; transition: 0.2s; border: 1px solid transparent;
+        }
+        .status-icon:hover { transform: scale(1.1); }
+        .st-3 { background: #002211; color: var(--success); border-color: var(--success); }
+        .st-2 { background: #001122; color: #00b3ff; border-color: #00b3ff; }
+        .st-1 { background: #221100; color: var(--warning); border-color: var(--warning); }
+        .st-0 { background: #110000; color: #666; border-color: #333; }
+
+        .deneme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+        .deneme-card {
+            background: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px;
+            border: 1px solid var(--border); position: relative;
+        }
+        .deneme-date { font-size: 10px; color: #888; }
+        .deneme-net { font-size: 20px; font-weight: 900; color: var(--accent); margin: 8px 0; }
+        .deneme-diff { font-size: 11px; padding: 3px 8px; border-radius: 4px; display: inline-block; background: rgba(255,255,255,0.05); }
+        .btn-del {
+            position: absolute; top: 10px; right: 10px; background: var(--danger); color: #fff;
+            border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;
+        }
+
+        .deneme-form { background: rgba(0,242,255,0.03); padding: 20px; border-radius: 8px; border: 1px solid var(--accent); margin-bottom: 20px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .form-input {
             background: #000; border: 1px solid var(--border); color: #fff;
-            padding: 10px; border-radius: 6px; text-align: center; outline: none; width: 100%;
+            padding: 10px; border-radius: 6px; font-size: 13px; outline: none;
         }
-        .btn-action {
-            width: 100%; padding: 12px; background: var(--accent); border: none;
-            border-radius: 8px; color: #000; font-weight: 900; cursor: pointer;
-            margin-top: 10px; transition: 0.2s;
+        .form-input:focus { border-color: var(--accent); }
+        .btn-add {
+            background: var(--accent); color: #000; border: none; padding: 12px;
+            border-radius: 6px; font-weight: 900; cursor: pointer; font-size: 13px; grid-column: span 4;
         }
 
-        .history-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px; background: #1a1a20; border-radius: 8px; margin-bottom: 8px; font-size: 12px;
-        }
-        .diff-badge { padding: 3px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; color: #000; margin-left: 5px; }
-        .diff-kolay { background: var(--success); } .diff-orta { background: var(--warning); } .diff-zor { background: var(--danger); }
-        .btn-del { background: transparent; color: var(--danger); border: 1px solid var(--danger); border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 10px; }
-
-        .achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
-        .ach-card {
-            background: #0d0d10; border: 1px solid var(--border); border-radius: 12px;
-            padding: 15px; text-align: center; filter: grayscale(1); opacity: 0.4; transition: 0.3s;
-        }
-        .ach-card.unlocked { filter: grayscale(0); opacity: 1; border-color: var(--accent); box-shadow: 0 0 10px rgba(0, 242, 255, 0.1); }
-
-        .theme-btn { padding: 15px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; font-weight: bold; color: #fff; text-align: center; }
-
+        .prog-list { display: flex; flex-direction: column; gap: 10px; }
         .prog-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px; background: #1a1a20; border-radius: 8px; margin-bottom: 8px;
-            font-size: 13px; border-left: 3px solid transparent;
+            background: rgba(255,255,255,0.02); padding: 12px 15px; border-radius: 8px;
+            border: 1px solid var(--border); display: flex; justify-content: space-between;
+            align-items: center;
         }
-        .prog-item.done { border-left-color: var(--success); }
-        .prog-item.not-done { border-left-color: var(--danger); }
-        .btn-status { cursor: pointer; padding: 6px 12px; border-radius: 6px; border: none; font-weight: bold; font-size: 12px; transition: 0.2s; }
-        .status-done { background: rgba(0,255,136,0.1); color: var(--success); border: 1px solid var(--success); }
-        .status-not { background: rgba(255,77,77,0.1); color: var(--danger); border: 1px solid var(--danger); }
-        .status-done:hover { background: var(--success); color: #000; }
-        .status-not:hover { background: var(--danger); color: #000; }
-        .stat-huge { font-size: 36px; font-weight: 900; color: var(--accent); text-align: center; margin: 10px 0; }
+        .prog-item.done { border-color: var(--success); background: rgba(0,255,136,0.05); }
+        .prog-item.not-done { border-color: var(--danger); background: rgba(255,77,77,0.05); }
+        .btn-status {
+            padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer;
+            font-weight: bold; font-size: 12px;
+        }
+        .status-done { background: var(--success); color: #000; }
+        .status-not { background: var(--danger); color: #fff; }
 
-        /* ===== ADMIN PANEL STİLLERİ (Çakışmayı önlemek için admin scope'lu) ===== */
-        #adminPanel {
-            position: fixed; inset: 0; background: #0b0b0f; color: #e0e0e0;
-            z-index: 9000; overflow-y: auto; padding: 16px; padding-bottom: 60px;
+        .ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+        .ach-card {
+            background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px;
+            border: 1px solid var(--border); text-align: center; opacity: 0.4;
+            transition: 0.3s; filter: grayscale(1);
         }
-        #adminPanel .container { max-width: 1400px; margin: 0 auto; }
-        #adminPanel .btn { background: #1e1e24; border: 1px solid #333; color: white; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 14px; white-space: nowrap; }
-        #adminPanel .btn:hover { background: #2a2a32; border-color: #00f2ff; }
-        #adminPanel .btn-primary { background: #00f2ff; color: #000; border: none; }
-        #adminPanel .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
-        #adminPanel .stat-card { background: #141418; border: 1px solid #26262b; border-radius: 12px; padding: 16px 12px; }
-        #adminPanel .stat-value { font-size: clamp(22px, 5vw, 30px); font-weight: 900; color: #00f2ff; }
-        #adminPanel .stat-label { font-size: 11px; color: #888; margin-bottom: 4px; }
-        #adminPanel .user-table-container { background: #141418; border-radius: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 20px; }
-        #adminPanel .user-table { width: 100%; border-collapse: collapse; min-width: 700px; }
-        #adminPanel .user-table th { background: #1a1a20; color: #aaa; font-weight: 500; font-size: 12px; padding: 12px 8px; text-align: left; border-bottom: 1px solid #333; }
-        #adminPanel .user-table td { padding: 12px 8px; border-bottom: 1px solid #222; font-size: 13px; }
-        #adminPanel .user-table tr { cursor: pointer; transition: 0.1s; }
-        #adminPanel .user-table tr:hover { background: #1e1e28; }
-        #adminPanel .detail-panel { background: #141418; border: 1px solid #26262b; border-radius: 16px; padding: 16px; margin-top: 16px; }
-        #adminPanel .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
-        #adminPanel .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
-        #adminPanel .tab { padding: 8px 14px; background: transparent; border: none; color: #888; cursor: pointer; border-radius: 20px; font-weight: 600; font-size: 13px; }
-        #adminPanel .tab.active { background: #00f2ff20; color: #00f2ff; }
-        #adminPanel .analysis-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
-        #adminPanel .topic-list { max-height: 350px; overflow-y: auto; }
-        #adminPanel .topic-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #222; font-size: 13px; }
-        #adminPanel .progress-bar { height: 6px; background: #333; border-radius: 4px; margin: 5px 0; width: 60px; display: inline-block; }
-        #adminPanel .progress-fill { height: 6px; background: #00f2ff; border-radius: 4px; }
-        #adminPanel .rank-badge { display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 6px; font-weight: 900; font-size: 13px; background: #333; color: white; }
-        #adminPanel .rank-1 { background: gold; color: black; }
-        #adminPanel .rank-2 { background: silver; color: black; }
-        #adminPanel .rank-3 { background: #cd7f32; color: black; }
-        #adminPanel .loading { text-align: center; padding: 30px; color: #888; }
-        #adminPanel .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        #adminPanel .small-note { font-size: 11px; color: #777; margin-top: 5px; }
-        #adminPanel .logout-btn { background: transparent; border: 1px solid #ff4d4d; color: #ff4d4d; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
-        #adminPanel .s-usta { color: #00ff88; font-weight: bold; }
-        #adminPanel .s-bitti { color: #00f2ff; }
-        #adminPanel .s-calisiyor { color: #ffb100; }
-        #adminPanel .s-bos { color: #555; }
-        #adminPanel .footer-credit {
+        .ach-card.unlocked { opacity: 1; filter: grayscale(0); border-color: var(--accent); background: rgba(0,242,255,0.05); }
+
+        .theme-bar { display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; }
+        .theme-dot {
+            width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+            border: 2px solid transparent; transition: 0.2s;
+        }
+        .theme-dot:hover { transform: scale(1.15); }
+        .theme-dot.active { border-color: #fff; box-shadow: 0 0 10px currentColor; }
+
+        /* ===== ÖĞRETMEN (ADMIN) SİSTEMİ STİLLERİ ===== */
+        #adminPanel {
+            width: 100%;
+            padding: 16px;
+            padding-bottom: 60px;
+            min-height: 100vh;
+            overflow-y: auto;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn { background: #1e1e24; border: 1px solid #333; color: white; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 14px; white-space: nowrap; }
+        .btn:hover { background: #2a2a32; border-color: #00f2ff; }
+        .btn-primary { background: #00f2ff; color: #000; border: none; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+        .stat-card { background: #141418; border: 1px solid #26262b; border-radius: 12px; padding: 16px 12px; }
+        .stat-value { font-size: clamp(22px, 5vw, 30px); font-weight: 900; color: #00f2ff; }
+        .stat-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+
+        .user-table-container { background: #141418; border-radius: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 20px; }
+        .user-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+        .user-table th { background: #1a1a20; color: #aaa; font-weight: 500; font-size: 12px; padding: 12px 8px; text-align: left; border-bottom: 1px solid #333; }
+        .user-table td { padding: 12px 8px; border-bottom: 1px solid #222; font-size: 13px; }
+        .user-table tr { cursor: pointer; transition: 0.1s; }
+        .user-table tr:hover { background: #1e1e28; }
+
+        .detail-panel { background: #141418; border: 1px solid #26262b; border-radius: 16px; padding: 16px; margin-top: 16px; }
+        .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+        .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+        .tab { padding: 8px 14px; background: transparent; border: none; color: #888; cursor: pointer; border-radius: 20px; font-weight: 600; font-size: 13px; }
+        .tab.active { background: #00f2ff20; color: #00f2ff; }
+
+        .analysis-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+        .topic-list { max-height: 350px; overflow-y: auto; }
+        .topic-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #222; font-size: 13px; }
+        .progress-bar { height: 6px; background: #333; border-radius: 4px; margin: 5px 0; width: 60px; display: inline-block; }
+        .progress-fill { height: 6px; background: #00f2ff; border-radius: 4px; }
+        .rank-badge { display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 6px; font-weight: 900; font-size: 13px; background: #333; color: white; }
+        .rank-1 { background: gold; color: black; }
+        .rank-2 { background: silver; color: black; }
+        .rank-3 { background: #cd7f32; color: black; }
+        .loading { text-align: center; padding: 30px; color: #888; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .small-note { font-size: 11px; color: #777; margin-top: 5px; }
+
+        .logout-btn { background: transparent; border: 1px solid #ff4d4d; color: #ff4d4d; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+
+        .footer-credit {
             position: fixed; bottom: 10px; left: 16px;
             font-size: 11px; color: #666; letter-spacing: 0.5px;
             z-index: 10; background: rgba(11,11,15,0.7); padding: 4px 10px;
             border-radius: 20px; backdrop-filter: blur(4px);
         }
 
-        /* Mobil uyum */
+        .s-usta { color: #00ff88; font-weight: bold; }
+        .s-bitti { color: #00f2ff; }
+        .s-calisiyor { color: #ffb100; }
+        .s-bos { color: #555; }
+
         @media (max-width: 900px) {
-            body { flex-direction: column; }
+            .sidebar { position: fixed; left: 0; top: 0; bottom: 0; transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); box-shadow: 5px 0 20px rgba(0,0,0,0.5); }
             .mobile-header { display: flex; }
-            .sidebar {
-                position: fixed; top: 60px; left: 0;
-                height: calc(100% - 60px);
-                transform: translateX(-100%); width: 240px;
-            }
-            .sidebar.open { transform: translateX(0); }
-            .main { padding: 15px; height: calc(100% - 60px); }
-            .grid-2, .grid-2-eq { grid-template-columns: 1fr; }
-            .topic-row { grid-template-columns: 1fr auto auto 100px; }
-            #floatBar { bottom: 15px; right: 15px; }
-            #syncStatus { bottom: 58px; right: 15px; }
+            .grid-2 { grid-template-columns: 1fr; }
+            .grid-2-eq { grid-template-columns: 1fr; }
+            .topic-grid { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
         }
-        @media (max-width: 800px) { #adminPanel .stats-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 500px) { #adminPanel .stats-grid { grid-template-columns: 1fr; } #adminPanel .analysis-cards { grid-template-columns: 1fr; } }
+        @media (max-width: 800px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 500px) { 
+            .stats-grid { grid-template-columns: 1fr; } 
+            .analysis-cards { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+            .btn-add { grid-column: span 1; }
+        }
     </style>
 </head>
 <body>
 
-<!-- ===== ROL SEÇİM EKRANI ===== -->
-<div id="roleSelectionOverlay">
+<!-- ROL SEÇİMİ -->
+<div id="roleSelection">
     <div class="role-box">
-        <h1>SEYDIOS</h1>
+        <h2>SEYDIOS</h2>
         <div class="subtitle">🧬 BİYOLOJİ LAB</div>
         <div class="role-buttons">
-            <button class="role-btn" onclick="selectRole('student')">👨‍🎓 ÖĞRENCİ</button>
-            <button class="role-btn teacher" onclick="selectRole('teacher')">👩‍🏫 ÖĞRETMEN</button>
+            <button class="role-btn" onclick="selectRole('student')">
+                👨‍🎓 ÖĞRENCİ GİRİŞİ
+            </button>
+            <button class="role-btn" onclick="selectRole('teacher')">
+                👨‍🏫 ÖĞRETMEN GİRİŞİ
+            </button>
         </div>
-        <p style="margin-top: 24px; font-size: 11px; color: #666;">Produced by Serdar</p>
     </div>
 </div>
 
-<!-- ===== ÖĞRENCİ GİRİŞ / KAYIT OVERLAY ===== -->
-<div id="studentAuthOverlay" style="display: none;">
+<!-- ÖĞRENCİ GİRİŞ/KAYIT -->
+<div id="registerOverlay">
     <div class="register-box">
         <h2>SEYDIOS</h2>
         <div class="subtitle">🧬 BİYOLOJİ LAB</div>
-        <p>Devam etmek için giriş yap veya kayıt ol</p>
+        <p>ÖĞRENCİ SİSTEMİ</p>
+        
         <div class="auth-tabs">
-            <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">🔐 GİRİŞ</button>
-            <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">📝 KAYIT</button>
+            <button class="auth-tab active" onclick="switchAuthTab('login')">GİRİŞ</button>
+            <button class="auth-tab" onclick="switchAuthTab('register')">KAYIT</button>
         </div>
+
         <div id="loginForm">
-            <input class="reg-input" id="login-no" type="text" placeholder="Okul No" autocomplete="off">
-            <input class="reg-input" id="login-sifre" type="password" placeholder="Şifre" autocomplete="off">
-            <button class="btn-register" onclick="handleLogin()">GİRİŞ YAP →</button>
+            <input type="text" id="loginUsername" class="reg-input" placeholder="Kullanıcı Adı" autocomplete="username">
+            <input type="password" id="loginPassword" class="reg-input" placeholder="Şifre" autocomplete="current-password">
+            <button class="btn-register" onclick="handleStudentLogin()">GİRİŞ YAP</button>
         </div>
+
         <div id="registerForm" class="hidden">
-            <input class="reg-input" id="reg-ad" type="text" placeholder="Ad Soyad" autocomplete="off">
-            <input class="reg-input" id="reg-no" type="text" placeholder="Okul No" autocomplete="off">
             <div class="reg-row">
-                <input class="reg-input" id="reg-sinif" type="text" placeholder="Sınıf (ör: 12)" style="margin-bottom:0;">
-                <input class="reg-input" id="reg-sube" type="text" placeholder="Şube (ör: A)" style="margin-bottom:0;">
+                <input type="text" id="regAd" class="reg-input" placeholder="Ad" autocomplete="given-name">
+                <input type="text" id="regSoyad" class="reg-input" placeholder="Soyad" autocomplete="family-name">
             </div>
-            <input class="reg-input" id="reg-sifre" type="password" placeholder="Şifre Belirle" autocomplete="off" style="margin-top:12px;">
-            <button class="btn-register" onclick="handleRegister()">KAYIT OL →</button>
+            <input type="text" id="regUsername" class="reg-input" placeholder="Kullanıcı Adı" autocomplete="username">
+            <input type="password" id="regPassword" class="reg-input" placeholder="Şifre" autocomplete="new-password">
+            <input type="password" id="regPassword2" class="reg-input" placeholder="Şifre Tekrar" autocomplete="new-password">
+            <button class="btn-register" onclick="handleStudentRegister()">KAYIT OL</button>
         </div>
+
+        <button class="btn-back" onclick="backToRoleSelection()">← Geri Dön</button>
         <div id="regError"></div>
-        <button class="btn-register" style="background:transparent; color:var(--accent); border:1px solid var(--border); margin-top:16px;" onclick="goBackToRoleSelection()">← Rol Seçimine Dön</button>
     </div>
 </div>
 
-<!-- ===== ÖĞRENCİ ANA PANELİ (AYT_BİYOLOJİ) ===== -->
-<div id="studentMainPanel" style="display: none; width: 100%; height: 100%;">
-    <div id="floatBar" style="display:none;">
-        <div id="userBadge">👤 —</div>
-        <button id="saveBtn" onclick="syncToSupabase()">☁️ KAYDET</button>
+<!-- ÖĞRETMEN GİRİŞİ -->
+<div id="teacherLoginOverlay" class="hidden" style="position: fixed; inset: 0; background: rgba(5,5,7,0.97); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+    <div class="register-box">
+        <h2>🔐 ADMIN</h2>
+        <div class="subtitle">🧬 BİYOLOJİ PANELİ</div>
+        <input type="text" id="teacherUsername" class="reg-input" placeholder="Kullanıcı Adı" autocomplete="off">
+        <input type="password" id="teacherPassword" class="reg-input" placeholder="Şifre" autocomplete="off">
+        <button class="btn-register" onclick="handleTeacherLogin()">GİRİŞ YAP</button>
+        <button class="btn-back" onclick="backToRoleSelection()">← Geri Dön</button>
+        <div id="teacherLoginError" style="color: #ff4d4d; font-size: 11px; text-align: center; margin-top: 8px; min-height: 16px;"></div>
     </div>
-    <div id="syncStatus"></div>
+</div>
 
+<!-- ÖĞRENCİ SİSTEMİ -->
+<div id="studentSystem" class="hidden" style="width: 100%; height: 100%; display: flex;">
     <div class="mobile-header">
         <div>
             <h1>SEYDIOS</h1>
             <div class="bio-tag">🧬 BİYOLOJİ</div>
         </div>
-        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+        <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
     </div>
 
-    <div class="sidebar" id="sidebar">
+    <div class="sidebar">
         <div class="brand-area">
             SEYDIOS
             <div class="brand-sub">🧬 BİYOLOJİ</div>
         </div>
         <div class="nav-list">
-            <div class="nav-item active" onclick="switchTab('GENEL')">📊 GENEL ÖZET</div>
-            <div class="nav-item" onclick="switchTab('BİYOLOJİ')" style="border-top:1px solid var(--border); margin-top:5px;">🧬 KONULAR <span id="count-BİYOLOJİ">%0</span></div>
-            <div class="nav-item" onclick="switchTab('DENEME')" style="border-top:1px solid var(--border); margin-top:5px; padding-top:15px;">📝 DENEMELER</div>
-            <div class="nav-item" onclick="switchTab('PROGRAM')">📅 HAFTALIK PROGRAM</div>
-            <div class="nav-item" onclick="switchTab('ISTATISTIK')">📈 HAFTALIK İSTATİSTİK</div>
-            <div class="nav-item" onclick="switchTab('BASARIMLAR')" style="border-top:1px solid var(--border); margin-top:10px;">🏆 BAŞARI VİTRİNİ</div>
+            <div class="nav-item active" onclick="switchTab('GENEL')">📊 GENEL</div>
+            <div class="nav-item" onclick="switchTab('KONULAR')">📚 KONULAR</div>
+            <div class="nav-item" onclick="switchTab('DENEME')">📝 DENEME</div>
+            <div class="nav-item" onclick="switchTab('PROGRAM')">📅 PROGRAM</div>
+            <div class="nav-item" onclick="switchTab('ISTATISTIK')">📈 İSTATİSTİK</div>
+            <div class="nav-item" onclick="switchTab('BASARIM')">🏆 BAŞARIM</div>
             <div class="nav-item" onclick="switchTab('AYARLAR')">⚙️ AYARLAR</div>
         </div>
-        <div class="sidebar-footer">Produced by Serdar</div>
+        <div class="sidebar-footer">SEYDIOS © 2025</div>
     </div>
 
-    <div class="main" id="mainContent">
-        <div class="countdown-bar">
-            <div class="timer-unit"><span class="timer-val" id="days">00</span><span class="timer-label">GÜN</span></div>
-            <div class="timer-unit"><span class="timer-val" id="hours">00</span><span class="timer-label">SAAT</span></div>
-            <div class="timer-unit"><span class="timer-val" id="mins">00</span><span class="timer-label">DAKİKA</span></div>
-        </div>
-
-        <!-- GENEL ÖZET -->
-        <div id="view-GENEL">
+    <div class="main">
+        <div id="tabGENEL">
+            <div class="countdown-bar">
+                <div class="timer-unit"><span class="timer-val" id="days">-</span><span class="timer-label">GÜN</span></div>
+                <div class="timer-unit"><span class="timer-val" id="hours">-</span><span class="timer-label">SAAT</span></div>
+                <div class="timer-unit"><span class="timer-val" id="minutes">-</span><span class="timer-label">DAKİKA</span></div>
+                <div class="timer-unit"><span class="timer-val" id="seconds">-</span><span class="timer-label">SANİYE</span></div>
+            </div>
             <div class="grid-2">
                 <div class="card">
-                    <div class="card-title">📈 BİYOLOJİ NET GELİŞİMİ (ÇİZGİ)</div>
+                    <div class="card-title">📊 KONU DAĞILIMI</div>
                     <div class="chart-container"><canvas id="mainChart"></canvas></div>
                 </div>
                 <div class="card">
-                    <div class="card-title" style="text-align:center;">MÜFREDAT DURUMU</div>
+                    <div class="card-title">🎯 TAMAMLANMA</div>
                     <div class="progress-circle" id="totalProgress">%0</div>
                     <div class="potansiyel-net">
-                        <span style="font-size:10px;">POTANSİYEL BİYO NET</span><br>
-                        <span id="potentialScore" style="font-size:24px; font-weight:900;">0.00</span>
+                        <div style="font-size:12px; opacity:0.7;">Potansiyel Biyo Net</div>
+                        <div id="potentialScore" style="font-size:24px; font-weight:900; margin-top:5px;">0.00</div>
                     </div>
                     <div class="trend-box">
-                        <span style="font-size:10px; color:#888;">DENEME TRENDİ</span><br>
-                        <span id="trendScore" style="font-size:14px; font-weight:bold;">Veri Yok</span>
+                        <div style="font-size:10px; opacity:0.6;">Trend</div>
+                        <div id="trendValue" style="font-size:18px; font-weight:900; margin-top:3px; color:var(--success);">-</div>
                     </div>
                 </div>
             </div>
-            <div class="card">
-                <div class="card-title">🕸️ KONU HAKİMİYETİ (RADAR)</div>
-                <div class="chart-container" style="max-width:520px; margin:0 auto;"><canvas id="radarChart"></canvas></div>
-            </div>
-        </div>
-
-        <!-- KONULAR -->
-        <div id="view-BİYOLOJİ" class="card" style="display:none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <div class="card-title" style="font-size:18px; margin:0;">🧬 BİYOLOJİ KONULARI</div>
-                <div style="font-size:12px; color:var(--success); font-weight:bold;" id="subjectProgress">%0</div>
-            </div>
-            <div id="topicList"></div>
-        </div>
-
-        <!-- DENEMELER -->
-        <div id="view-DENEME" style="display:none;">
-            <div class="grid-2">
-                <div class="card">
-                    <div class="card-title">📝 YENİ BİYOLOJİ DENEMESİ GİR</div>
-                    <div class="d-row" style="grid-template-columns:1fr 1fr; margin-bottom:8px;">
-                        <div style="font-size:11px; color:#888;">Zorluk</div>
-                        <select id="in-diff">
-                            <option value="kolay">Kolay</option>
-                            <option value="orta" selected>Orta</option>
-                            <option value="zor">Zor</option>
-                        </select>
-                    </div>
-                    <div class="d-row">
-                        <span>BİYOLOJİ</span>
-                        <input type="number" id="in-bio-d" placeholder="Doğru" min="0" max="13">
-                        <input type="number" id="in-bio-y" placeholder="Yanlış" min="0" max="13">
-                    </div>
-                    <div style="background:#1a1a20; padding:12px; border-radius:8px; margin:10px 0; font-size:13px; color:var(--accent); font-weight:bold; text-align:center;">
-                        NET: <span id="previewNet">0.00</span>
-                    </div>
-                    <button class="btn-action" onclick="saveDeneme()">💾 KAYDET</button>
-                </div>
-                <div class="card">
-                    <div class="card-title">📊 NET GELİŞİMİ</div>
-                    <div class="chart-container"><canvas id="denemeLineChart"></canvas></div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-title">📋 DENEME GEÇMİŞİ</div>
-                <div id="denemeListContainer"></div>
-            </div>
-        </div>
-
-        <!-- HAFTALIK PROGRAM -->
-        <div id="view-PROGRAM" style="display:none;">
-            <div class="grid-2">
-                <div class="card">
-                    <div class="card-title">BU HAFTA BİTİRİLECEK KONULAR</div>
-                    <div id="prog-list" style="min-height:200px; max-height:400px; overflow-y:auto;"></div>
-                    <button class="btn-action" style="margin-top:15px; background:var(--success);" onclick="finishWeek()">🚀 HAFTAYI BİTİR VE KAYDET</button>
-                </div>
-                <div class="card" style="height:fit-content;">
-                    <div class="card-title">+ PROGRAMA KONU EKLE</div>
-                    <div class="d-row" style="grid-template-columns:1fr;">
-                        <select id="prog-topic" style="width:100%; margin-bottom:10px; padding:10px;"></select>
-                    </div>
-                    <button class="btn-action" onclick="addTopicToProgram()">➕ EKLE</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- HAFTALIK İSTATİSTİK -->
-        <div id="view-ISTATISTIK" style="display:none;">
-            <div class="grid-2">
-                <div class="card">
-                    <div class="card-title">📈 HAFTALIK PROGRAM GRAFİĞİ</div>
-                    <div class="chart-container"><canvas id="weeklyChart"></canvas></div>
-                </div>
-                <div class="card">
-                    <div class="card-title" style="text-align:center;">SON HAFTA</div>
-                    <div class="stat-huge" id="lastWeekRate">%0</div>
-                    <div class="trend-box">
-                        <span style="font-size:10px; color:#888;">TREND</span><br>
-                        <span id="weeklyTrend" style="font-size:18px; font-weight:bold;">Veri Yok</span>
-                    </div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-title">📅 HAFTA GEÇMİŞİ</div>
-                <div id="weeklyHistoryList"></div>
-            </div>
-        </div>
-
-        <!-- BAŞARIMLAR -->
-        <div id="view-BASARIMLAR" class="card" style="display:none;">
-            <div class="card-title">🏆 BAŞARI VİTRİNİ</div>
-            <div class="achievements-grid" id="achievementsContainer"></div>
-        </div>
-
-        <!-- AYARLAR -->
-        <div id="view-AYARLAR" style="display:none;">
             <div class="grid-2-eq">
                 <div class="card">
-                    <div class="card-title">TEMA SEÇİMİ</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                        <button class="theme-btn" style="background:#00f2ff; color:#000;" onclick="setTheme('#00f2ff')">SİBER MAVİ</button>
-                        <button class="theme-btn" style="background:#00ff88; color:#000;" onclick="setTheme('#00ff88')">NEON YEŞİL</button>
-                        <button class="theme-btn" style="background:#b829ff;" onclick="setTheme('#b829ff')">MATRİX MOR</button>
-                        <button class="theme-btn" style="background:#ffb100; color:#000;" onclick="setTheme('#ffb100')">ENERJİ TURUNCU</button>
+                    <div class="card-title">🔴 KRİTİK KONULAR</div>
+                    <div id="kritikList" style="font-size:11px; color:#888; text-align:center; padding:10px;">Yükleniyor...</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">🎯 KONU DAĞILIM RADAR</div>
+                    <div class="chart-container"><canvas id="radarChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tabKONULAR" class="hidden"></div>
+        <div id="tabDENEME" class="hidden">
+            <div class="deneme-form">
+                <div class="card-title">➕ YENİ DENEME EKLE</div>
+                <div class="form-row">
+                    <input type="date" id="dTarih" class="form-input">
+                    <select id="dZorluk" class="form-input">
+                        <option>Kolay</option><option>Orta</option><option>Zor</option><option>Çok Zor</option>
+                    </select>
+                    <input type="number" id="dDogru" class="form-input" placeholder="Doğru" min="0" max="13" step="1">
+                    <input type="number" id="dYanlis" class="form-input" placeholder="Yanlış" min="0" max="13" step="1">
+                    <button class="btn-add" onclick="addDeneme()">EKLE</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">📊 DENEME GRAFİĞİ</div>
+                <div class="chart-container"><canvas id="denemeLineChart"></canvas></div>
+            </div>
+            <div style="margin-top:20px;"><div class="card-title">📝 DENEMELER</div><div id="denemeList" class="deneme-grid"></div></div>
+        </div>
+
+        <div id="tabPROGRAM" class="hidden">
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">➕ PROGRAMA KONU EKLE</div>
+                <div style="display:flex; gap:10px;">
+                    <select id="prog-topic" class="form-input" style="flex:1;"></select>
+                    <button class="btn-add" onclick="addTopicToProgram()">EKLE</button>
+                </div>
+            </div>
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <div class="card-title" style="margin:0;">📅 BU HAFTANIN PROGRAMI</div>
+                    <button class="btn-add" style="padding:8px 16px;" onclick="finishWeek()">HAFTAYI BİTİR</button>
+                </div>
+                <div id="prog-list" class="prog-list"></div>
+            </div>
+        </div>
+
+        <div id="tabISTATISTIK" class="hidden">
+            <div class="grid-2-eq">
+                <div class="card">
+                    <div class="card-title">SON HAFTALIK BAŞARI</div>
+                    <div class="progress-circle" id="lastWeekRate" style="font-size:36px;">%0</div>
+                    <div class="trend-box">
+                        <div style="font-size:10px; opacity:0.6;">Önceki Haftaya Göre</div>
+                        <div id="weeklyTrend" style="font-size:18px; font-weight:900; margin-top:3px;">Veri Yok</div>
                     </div>
                 </div>
                 <div class="card">
-                    <div class="card-title">HESAP BİLGİLERİ</div>
-                    <div id="accountInfo" style="font-size:13px; color:#888; line-height:2;"></div>
-                    <button onclick="logoutUser()" style="margin-top:15px; padding:10px 20px; background:transparent; border:1px solid var(--danger); color:var(--danger); border-radius:8px; cursor:pointer; font-weight:bold;">🚪 ÇIKIŞ YAP</button>
+                    <div class="card-title">HAFTALIK PERFORMANS</div>
+                    <div class="chart-container"><canvas id="weeklyChart"></canvas></div>
                 </div>
+            </div>
+            <div class="card" style="margin-top:20px;">
+                <div class="card-title">GEÇMİŞ HAFTALAR</div>
+                <div id="weeklyHistoryList" class="prog-list"></div>
+            </div>
+        </div>
+
+        <div id="tabBASARIM" class="hidden">
+            <div class="card">
+                <div class="card-title">🏆 BAŞARIMLAR</div>
+                <div id="achievementsContainer" class="ach-grid"></div>
+            </div>
+        </div>
+
+        <div id="tabAYARLAR" class="hidden">
+            <div class="card">
+                <div class="card-title">🎨 TEMA</div>
+                <div class="theme-bar" id="themeBar"></div>
             </div>
         </div>
     </div>
+
+    <div id="floatBar">
+        <div id="userBadge">ÖĞRENCİ</div>
+        <button id="saveBtn" onclick="saveToCloud()">KAYDET</button>
+    </div>
+    <div id="syncStatus"></div>
 </div>
 
-<!-- ===== ADMIN PANELİ ===== -->
-<div id="adminPanel" style="display: none;">
-    <div class="container">
-        <div class="flex-between" style="margin-bottom:16px;">
+<!-- ÖĞRETMEN (ADMIN) SİSTEMİ -->
+<div id="adminPanel" class="hidden">
+    <div class="container" style="max-width: 1400px; margin: 0 auto;">
+        <div class="admin-header">
             <div>
-                <h1 style="color:#00f2ff;">📊 SEYDIOS ADMIN</h1>
-                <div style="color:#00ff88; font-size:11px; letter-spacing:2px;">🧬 BİYOLOJİ TAKİP PANELİ</div>
+                <h1 style="color: #00f2ff; font-weight: 600; letter-spacing: 1px; margin-bottom: 4px; font-size: clamp(18px, 5vw, 26px);">📊 SEYDIOS ADMIN</h1>
+                <div style="color: #00ff88; font-size: 11px; letter-spacing: 2px; font-weight: bold; margin-bottom: 10px;">🧬 BİYOLOJİ TAKIP PANELİ</div>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn" onclick="refreshAdminData()">🔄 Yenile</button>
+                <button class="btn" onclick="refreshData()">🔄 Yenile</button>
                 <button class="btn btn-primary" onclick="analyzeAll()">📈 Eksik Analizi</button>
-                <button class="logout-btn" onclick="adminLogout()">🚪 Çıkış</button>
+                <button class="logout-btn" onclick="logoutTeacher()">🚪 Çıkış</button>
             </div>
         </div>
 
@@ -555,438 +583,1181 @@
         </div>
 
         <div class="user-table-container">
-            <table class="user-table">
+            <table class="user-table" id="userTable">
                 <thead>
                     <tr>
-                        <th>#</th><th>Ad Soyad</th><th>Okul No</th><th>Sınıf</th>
-                        <th>Pot. Biyo Net</th><th>İlerleme</th>
-                        <th>Son Biyo Net</th><th>Ort. Net (3)</th><th>Güncelleme</th>
+                        <th>Ad Soyad</th>
+                        <th>Kullanıcı Adı</th>
+                        <th>Pot. Net</th>
+                        <th>Tamamlama</th>
+                        <th>Deneme Sayısı</th>
+                        <th>Son Güncelleme</th>
                     </tr>
                 </thead>
-                <tbody id="userTableBody"><tr><td colspan="9" class="loading">Yükleniyor...</td></tr></tbody>
+                <tbody id="userTableBody">
+                    <tr><td colspan="6" class="loading">Yükleniyor...</td></tr>
+                </tbody>
             </table>
         </div>
 
         <div id="detailPanel" class="detail-panel" style="display:none;">
             <div class="detail-header">
-                <h3 id="detailUserName" style="color:#fff;">Kullanıcı</h3>
+                <h3 id="detailUserName" style="color: #00f2ff; margin: 0;">-</h3>
                 <button class="btn" onclick="closeDetail()">✕ Kapat</button>
             </div>
             <div class="tabs">
-                <button class="tab active" onclick="switchDetailTab('overview', this)">📋 Genel</button>
-                <button class="tab" onclick="switchDetailTab('topics', this)">🧬 Konular</button>
-                <button class="tab" onclick="switchDetailTab('trials', this)">📝 Denemeler</button>
-                <button class="tab" onclick="switchDetailTab('weeks', this)">📅 Haftalık</button>
+                <button class="tab active" onclick="switchDetailTab('overview')">Özet</button>
+                <button class="tab" onclick="switchDetailTab('topics')">Konular</button>
+                <button class="tab" onclick="switchDetailTab('trials')">Denemeler</button>
+                <button class="tab" onclick="switchDetailTab('weeks')">Haftalık</button>
             </div>
             <div id="detailContent"></div>
         </div>
 
-        <div id="analysisPanel" style="display:none; margin-top:20px;">
-            <div class="detail-panel">
-                <div class="flex-between">
-                    <h3>📊 Biyoloji Eksik Konu Analizi</h3>
-                    <button class="btn" onclick="document.getElementById('analysisPanel').style.display='none'">Kapat</button>
-                </div>
-                <div id="analysisContent" style="margin-top:16px;"></div>
+        <div id="analysisPanel" class="detail-panel" style="display:none;">
+            <div class="detail-header">
+                <h3 style="color: #00f2ff; margin: 0;">📊 SINIF ANALİZİ</h3>
             </div>
+            <div id="analysisContent"></div>
         </div>
     </div>
-    <div class="footer-credit">Produced by Serdar</div>
+
+    <div class="footer-credit">SEYDIOS © 2025</div>
 </div>
 
 <script>
-    // ==================== ORTAK SUPABASE ====================
-    const SUPABASE_URL = 'https://ftfqdwucaqpzcthgelpk.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0ZnFkd3VjYXFwemN0aGdlbHBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyMDM5MDQsImV4cCI6MjA5MTc3OTkwNH0.a0X6_-Z3CabWdIv1q-Cos_KqcLQeVnCHIDD3UmJOamc';
-    const { createClient } = supabase;
-    const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Global değişkenler
+    let userRole = null; // 'student' veya 'teacher'
+    let currentUser = null;
+    let supabase = null;
 
-    // ==================== ROL SEÇİMİ ====================
-    window.selectRole = function(role) {
-        document.getElementById('roleSelectionOverlay').style.display = 'none';
+    // Rol seçimi
+    function selectRole(role) {
+        userRole = role;
+        document.getElementById('roleSelection').style.display = 'none';
+        
         if (role === 'student') {
-            document.getElementById('studentAuthOverlay').style.display = 'flex';
-            // Öğrenci giriş/kayıt ekranını sıfırla
-            switchAuthTab('login');
-        } else if (role === 'teacher') {
-            // Admin giriş ekranı (basit prompt yerine direkt admin giriş formu gösterelim, ama bizde admin paneli şifreli)
-            // Admin girişini hemen gösterelim: Admin_Biyoloji'deki gibi bir login overlay yok, doğrudan şifre sorabiliriz.
-            // Kullanıcı adı/şifre soralım:
-            showAdminLoginPrompt();
-        }
-    };
-
-    function showAdminLoginPrompt() {
-        // Basit prompt ile admin girişi
-        const username = prompt('Admin Kullanıcı Adı:');
-        const password = prompt('Admin Şifresi:');
-        if (username === 'UHKFLSERDAR' && password === 'UHKFL70ermenek') {
-            localStorage.setItem('admin_bio_auth', 'true');
-            document.getElementById('adminPanel').style.display = 'block';
-            refreshAdminData();
+            document.getElementById('registerOverlay').style.display = 'flex';
         } else {
-            alert('Hatalı giriş!');
-            document.getElementById('roleSelectionOverlay').style.display = 'flex';
+            document.getElementById('teacherLoginOverlay').classList.remove('hidden');
         }
     }
 
-    window.goBackToRoleSelection = function() {
-        document.getElementById('studentAuthOverlay').style.display = 'none';
-        document.getElementById('roleSelectionOverlay').style.display = 'flex';
-    };
-
-    // Admin çıkış
-    window.adminLogout = function() {
-        if (confirm('Çıkış yapmak istediğinize emin misiniz?')) {
-            localStorage.removeItem('admin_bio_auth');
-            document.getElementById('adminPanel').style.display = 'none';
-            document.getElementById('roleSelectionOverlay').style.display = 'flex';
-        }
-    };
-
-    // ==================== ÖĞRENCİ TARAFI (AYT_BİYOLOJİ) ====================
-    let currentUser = null, currentUserId = null;
-    const bioTopics = [
-        { n: "Sinir Sistemi", w: 1 }, { n: "Endokrin Sistem", w: 1 },
-        { n: "Duyu Organları", w: 0.8 }, { n: "Destek ve Hareket Sistemi", w: 0.8 },
-        { n: "Sindirim Sistemi", w: 1, k: true }, { n: "Dolaşım ve Bağışıklık", w: 1.2, k: true },
-        { n: "Solunum Sistemi", w: 1 }, { n: "Boşaltım Sistemi", w: 1 },
-        { n: "Komünite ve Popülasyon Ekolojisi", w: 1.8, k: true },
-        { n: "Nükleik Asitler/Protein Sentezi", w: 1.5, k: true },
-        { n: "Canlılarda Enerji Dönüşümleri", w: 1.8, k: true },
-        { n: "Bitki Biyolojisi", w: 2.1, k: true }
-    ];
-    const achievements = [
-        { id: "a1", i: "🚀", t: "İlk Adım", d: "İlk biyoloji konunu bitir." },
-        { id: "a2", i: "🔥", t: "Yarı Yol", d: "Biyoloji %50 tamamlandı." },
-        { id: "a3", i: "👑", t: "Biyoloji Ustası", d: "Tüm konuları %100 tamamla." },
-        { id: "a5", i: "📝", t: "Deneme Kurdu", d: "5 biyoloji denemesi kaydet." },
-        { id: "a7", i: "🎯", t: "Hedef 6", d: "Potansiyel biyo netini 6'ya çıkar." },
-        { id: "a8", i: "💎", t: "Şampiyon", d: "Potansiyel biyo netini 10'a çıkar." },
-        { id: "a9", i: "📅", t: "Planlı", d: "İlk haftalık programını tamamla." },
-        { id: "a10", i: "💯", t: "Kusursuz Hafta", d: "Bir haftayı %100 bitir." },
-        { id: "a11", i: "📈", t: "İstikrarlı", d: "3 hafta üst üste program bitir." },
-        { id: "a12", i: "💀", t: "Seri Katil", d: "5 hafta üst üste program bitir." }
-    ];
-
-    let activeTab = "GENEL";
-    let userData = JSON.parse(localStorage.getItem('seydios_bio_progress')) || {};
-    let mebData = JSON.parse(localStorage.getItem('seydios_bio_meb')) || {};
-    let trialData = JSON.parse(localStorage.getItem('seydios_bio_trials')) || [];
-    let weekPlan = JSON.parse(localStorage.getItem('seydios_bio_weekplan')) || [];
-    let weekHistory = JSON.parse(localStorage.getItem('seydios_bio_weekhistory')) || [];
-    let savedTheme = localStorage.getItem('seydios_bio_theme') || '#00f2ff';
-    let chartInstance = null, radarInstance = null, weekChartInstance = null, denemeLineInstance = null;
-
-    document.documentElement.style.setProperty('--accent', savedTheme);
-
-    // Öğrenci oturum yükleme
-    const savedUserId = localStorage.getItem('seydios_bio_user_id');
-    const savedUserObj = localStorage.getItem('seydios_bio_user');
-    if (savedUserId && savedUserObj) {
-        currentUserId = savedUserId;
-        currentUser = JSON.parse(savedUserObj);
-        afterLogin(currentUser.ad_soyad);
+    function backToRoleSelection() {
+        document.getElementById('roleSelection').style.display = 'flex';
+        document.getElementById('registerOverlay').style.display = 'none';
+        document.getElementById('teacherLoginOverlay').classList.add('hidden');
+        userRole = null;
     }
 
-    window.switchAuthTab = function(mode) {
-        const errEl = document.getElementById('regError'); errEl.innerText = '';
-        if (mode === 'login') {
-            document.getElementById('tabLogin').classList.add('active');
-            document.getElementById('tabRegister').classList.remove('active');
+    // Auth tab geçişi (öğrenci)
+    function switchAuthTab(tab) {
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        if (tab === 'login') {
+            document.querySelector('.auth-tab:first-child').classList.add('active');
             document.getElementById('loginForm').classList.remove('hidden');
             document.getElementById('registerForm').classList.add('hidden');
         } else {
-            document.getElementById('tabRegister').classList.add('active');
-            document.getElementById('tabLogin').classList.remove('active');
-            document.getElementById('registerForm').classList.remove('hidden');
+            document.querySelector('.auth-tab:last-child').classList.add('active');
             document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.remove('hidden');
         }
-    };
-
-    async function handleLogin() {
-        const no = document.getElementById('login-no').value.trim();
-        const sifre = document.getElementById('login-sifre').value.trim();
-        const errEl = document.getElementById('regError');
-        errEl.innerText = '';
-        if (!no || !sifre) { errEl.innerText = 'Okul No ve Şifre gerekli!'; return; }
-        const btn = document.querySelector('#loginForm .btn-register');
-        btn.disabled = true; btn.innerText = 'Kontrol ediliyor...';
-        try {
-            const { data: user, error } = await sb.from('user_profiles').select('id,ad_soyad,okul_no,sinif,sube,sifre').eq('okul_no', no).single();
-            if (error || !user) { errEl.innerText = 'Okul No bulunamadı!'; btn.disabled=false; btn.innerText='GİRİŞ YAP →'; return; }
-            if (user.sifre !== sifre) { errEl.innerText = 'Şifre hatalı!'; btn.disabled=false; btn.innerText='GİRİŞ YAP →'; return; }
-            resetLocalData();
-            currentUser = { ad_soyad: user.ad_soyad, okul_no: user.okul_no, sinif: user.sinif, sube: user.sube };
-            currentUserId = user.id;
-            localStorage.setItem('seydios_bio_user', JSON.stringify(currentUser));
-            localStorage.setItem('seydios_bio_user_id', currentUserId);
-            await loadFromSupabase();
-            afterLogin(user.ad_soyad);
-        } catch (e) { errEl.innerText = 'Bağlantı hatası!'; btn.disabled=false; btn.innerText='GİRİŞ YAP →'; }
+        document.getElementById('regError').innerText = '';
     }
 
-    async function handleRegister() {
-        const ad = document.getElementById('reg-ad').value.trim();
-        const no = document.getElementById('reg-no').value.trim();
-        const sinif = document.getElementById('reg-sinif').value.trim();
-        const sube = document.getElementById('reg-sube').value.trim();
-        const sifre = document.getElementById('reg-sifre').value.trim();
-        const errEl = document.getElementById('regError'); errEl.innerText = '';
-        if (!ad || !no || !sinif || !sube || !sifre) { errEl.innerText = 'Tüm alanları doldur!'; return; }
-        const btn = document.querySelector('#registerForm .btn-register');
-        btn.disabled = true; btn.innerText = 'Kaydediliyor...';
-        try {
-            const { data: existing } = await sb.from('user_profiles').select('id').eq('okul_no', no).single();
-            if (existing) { errEl.innerText = 'Bu okul no zaten kayıtlı!'; btn.disabled=false; btn.innerText='KAYIT OL →'; return; }
-            const { data: newUser, error } = await sb.from('user_profiles').insert({ ad_soyad: ad, okul_no: no, sinif, sube, sifre }).select('id').single();
-            if (error) { errEl.innerText = 'Kayıt hatası: ' + error.message; btn.disabled=false; btn.innerText='KAYIT OL →'; return; }
-            resetLocalData();
-            currentUserId = newUser.id;
-            currentUser = { ad_soyad: ad, okul_no: no, sinif, sube };
-            localStorage.setItem('seydios_bio_user', JSON.stringify(currentUser));
-            localStorage.setItem('seydios_bio_user_id', currentUserId);
-            afterLogin(ad);
-        } catch (e) { errEl.innerText = 'Bağlantı hatası!'; btn.disabled=false; btn.innerText='KAYIT OL →'; }
+    // ===== ÖĞRENCİ SİSTEMİ KODLARI =====
+    const SUPABASE_URL = 'https://hqxuekekfrtutmfvuknx.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxeHVla2VrZnJ0dXRtZnZ1a254Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc0NTgwMzQsImV4cCI6MjA1MzAzNDAzNH0.d0o2KKR5zJPBMVHxRmzMeHT09zU4uxnJGaKt_KpEZ8w';
+
+    let userData = {};
+    let trialData = [];
+    let weekPlan = [];
+    let weekHistory = [];
+    let activeTab = 'GENEL';
+    let savedTheme = '#00f2ff';
+    let mainChartInstance = null, radarChartInstance = null, denemeChartInstance = null, weekChartInstance = null;
+
+    const bioTopics = [
+        { n: 'Canlıların Sınıflandırılması', k: false }, { n: 'Hücre', k: true },
+        { n: 'Canlıların Yapısında Bulunan Organik Bileşikler', k: true },
+        { n: 'Canlılarda Enerji Dönüşümleri', k: true }, { n: 'Fotosentez', k: false },
+        { n: 'Kemosentez', k: false }, { n: 'Hücresel Solunum', k: false },
+        { n: 'Bitkilerde Madde Taşınması', k: false }, { n: 'Bitkilerde Eşeyli Üreme', k: false },
+        { n: 'Mayoz ve Üreme Hücreleri Oluşumu', k: false },
+        { n: 'Kalıtımın Genel İlkeleri', k: false }, { n: 'Kalıtım Çeşitleri', k: false },
+        { n: 'Canlılık ve Enerji', k: false }, { n: 'Sinir Sistemi', k: false },
+        { n: 'Duyu Organları', k: false }, { n: 'Endokrin Sistem', k: false },
+        { n: 'Destek ve Hareket Sistemi', k: false }, { n: 'İç Salgı Bezleri', k: false },
+        { n: 'Homeostazi', k: false }, { n: 'Sindirim Sistemi', k: false },
+        { n: 'Dolaşım Sistemi', k: false }, { n: 'Solunum Sistemi', k: false },
+        { n: 'Boşaltım Sistemi', k: false }, { n: 'Üreme Sistemi', k: false },
+        { n: 'Gelişim ve Kalıtım', k: false }, { n: 'Nükleik Asitler', k: true },
+        { n: 'Protein Sentezi', k: true }, { n: 'Canlılarda Enerji Dönüşümleri', k: false },
+        { n: 'Bitki Biyolojisi', k: false }, { n: 'Canlılar ve Çevre', k: false },
+        { n: 'Ekosistem Ekolojisi', k: false }, { n: 'Güncel Çevre Sorunları', k: false },
+        { n: 'Biyoteknoloji', k: false }, { n: 'İmmün Sistem', k: false },
+        { n: 'Bağışıklık', k: false }, { n: 'Kan Grupları', k: false },
+        { n: 'Populasyon Ekolojisi', k: false }, { n: 'Komünite Ekolojisi', k: false },
+        { n: 'Davranış Biyolojisi', k: false }, { n: 'Evrim', k: false }
+    ];
+
+    const achievements = [
+        { id: 'a1', i: '🎯', t: 'İlk Adım', d: 'İlk konuyu işaretle' },
+        { id: 'a2', i: '📚', t: 'Yarı Yol', d: '%50 tamamlama' },
+        { id: 'a3', i: '🏆', t: 'Tam Kapanış', d: '%100 tamamlama' },
+        { id: 'a5', i: '📝', t: 'Deneme Ustası', d: '5 deneme çöz' },
+        { id: 'a7', i: '💪', t: 'Net Avcısı', d: 'Pot. 6+ net' },
+        { id: 'a8', i: '🔥', t: 'Yakıcı', d: 'Pot. 10+ net' },
+        { id: 'a9', i: '📅', t: 'Programcı', d: 'Bir hafta bitir' },
+        { id: 'a10', i: '⭐', t: 'Mükemmel Hafta', d: '%100 hafta' },
+        { id: 'a11', i: '🚀', t: 'Disiplinli', d: '3 hafta bitir' },
+        { id: 'a12', i: '👑', t: 'Hafta Kralı', d: '5 hafta bitir' }
+    ];
+
+    function handleStudentRegister() {
+        const ad = document.getElementById('regAd').value.trim();
+        const soyad = document.getElementById('regSoyad').value.trim();
+        const username = document.getElementById('regUsername').value.trim();
+        const password = document.getElementById('regPassword').value;
+        const password2 = document.getElementById('regPassword2').value;
+        const err = document.getElementById('regError');
+
+        if (!ad || !soyad || !username || !password) { err.innerText = 'Tüm alanları doldurun!'; return; }
+        if (password.length < 6) { err.innerText = 'Şifre en az 6 karakter olmalı!'; return; }
+        if (password !== password2) { err.innerText = 'Şifreler uyuşmuyor!'; return; }
+
+        err.innerText = 'Kayıt yapılıyor...';
+        if (!supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        supabase.auth.signUp({ email: `${username}@seydios.local`, password })
+            .then(res => {
+                if (res.error) throw res.error;
+                return supabase.from('seydios_bio_users').insert([{
+                    user_id: res.data.user.id,
+                    ad: ad,
+                    soyad: soyad,
+                    username: username,
+                    sync: { progress: {}, trials: [], weekPlan: [], weekHistory: [] }
+                }]);
+            })
+            .then(() => {
+                err.style.color = 'var(--success)';
+                err.innerText = 'Kayıt başarılı! Giriş yapılıyor...';
+                setTimeout(() => {
+                    currentUser = { ad, soyad, username };
+                    startStudentSystem();
+                }, 1000);
+            })
+            .catch(e => {
+                err.style.color = 'var(--danger)';
+                err.innerText = e.message.includes('already') ? 'Bu kullanıcı adı zaten kayıtlı!' : 'Hata: ' + e.message;
+            });
     }
 
-    function resetLocalData() {
-        localStorage.removeItem('seydios_bio_progress');
-        localStorage.removeItem('seydios_bio_meb');
-        localStorage.removeItem('seydios_bio_trials');
-        localStorage.removeItem('seydios_bio_weekplan');
-        localStorage.removeItem('seydios_bio_weekhistory');
-        userData = {}; mebData = {}; trialData = []; weekPlan = []; weekHistory = [];
+    function handleStudentLogin() {
+        const username = document.getElementById('loginUsername').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        const err = document.getElementById('regError');
+
+        if (!username || !password) { err.innerText = 'Kullanıcı adı ve şifre giriniz!'; return; }
+
+        err.innerText = 'Giriş yapılıyor...';
+        if (!supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        supabase.auth.signInWithPassword({ email: `${username}@seydios.local`, password })
+            .then(res => {
+                if (res.error) throw res.error;
+                return supabase.from('seydios_bio_users').select('*').eq('user_id', res.data.user.id).single();
+            })
+            .then(res => {
+                if (res.error) throw res.error;
+                currentUser = res.data;
+                const sync = res.data.sync || {};
+                userData = sync.progress || {};
+                trialData = sync.trials || [];
+                weekPlan = sync.weekPlan || [];
+                weekHistory = sync.weekHistory || [];
+                savedTheme = sync.theme || '#00f2ff';
+                document.documentElement.style.setProperty('--accent', savedTheme);
+                startStudentSystem();
+            })
+            .catch(e => {
+                err.style.color = 'var(--danger)';
+                err.innerText = e.message.includes('Invalid') ? 'Kullanıcı adı veya şifre hatalı!' : 'Hata: ' + e.message;
+            });
     }
 
-    function afterLogin(name) {
-        document.getElementById('studentAuthOverlay').style.display = 'none';
-        document.getElementById('studentMainPanel').style.display = 'flex';
-        document.getElementById('floatBar').style.display = 'flex';
-        document.getElementById('userBadge').innerText = '👤 ' + name.split(' ')[0];
-        if (currentUser) {
-            document.getElementById('accountInfo').innerHTML =
-                `<div>👤 ${currentUser.ad_soyad}</div><div>🏫 ${currentUser.sinif}-${currentUser.sube}</div><div>🔢 ${currentUser.okul_no}</div>`;
-        }
+    function startStudentSystem() {
+        document.getElementById('registerOverlay').style.display = 'none';
+        document.getElementById('studentSystem').classList.remove('hidden');
+        document.getElementById('userBadge').innerText = `${currentUser.ad} ${currentUser.soyad}`;
         updateStats();
         switchTab('GENEL');
+        updateProgTopicList();
+        renderThemes();
+        startCountdown();
     }
 
-    function logoutUser() {
-        if (confirm('Çıkış yapmak istiyor musun?')) {
-            localStorage.removeItem('seydios_bio_user');
-            localStorage.removeItem('seydios_bio_user_id');
-            document.getElementById('studentMainPanel').style.display = 'none';
-            document.getElementById('roleSelectionOverlay').style.display = 'flex';
-            document.getElementById('studentAuthOverlay').style.display = 'none';
-        }
-    }
-
-    async function loadFromSupabase() {
-        if (!currentUserId) return;
-        const { data } = await sb.from('user_sync_data').select('*').eq('user_id', currentUserId).single();
-        if (data) {
-            if (data.progress) { userData = data.progress; localStorage.setItem('seydios_bio_progress', JSON.stringify(userData)); }
-            if (data.meb) { mebData = data.meb; localStorage.setItem('seydios_bio_meb', JSON.stringify(mebData)); }
-            if (data.trials) { trialData = data.trials; localStorage.setItem('seydios_bio_trials', JSON.stringify(trialData)); }
-            if (data.week_plan) { weekPlan = data.week_plan; localStorage.setItem('seydios_bio_weekplan', JSON.stringify(weekPlan)); }
-            if (data.week_history) { weekHistory = data.week_history; localStorage.setItem('seydios_bio_weekhistory', JSON.stringify(weekHistory)); }
-            setSyncStatus('✅ Veriler yüklendi');
-        }
-    }
-
-    async function syncToSupabase() {
-        if (!currentUserId) return;
+    function saveToCloud() {
+        if (!currentUser) return;
         const btn = document.getElementById('saveBtn');
-        btn.disabled = true; btn.innerText = '⏳ Kaydediliyor...';
-        try {
-            const payload = {
-                user_id: currentUserId, progress: userData, meb: mebData, trials: trialData,
-                week_plan: weekPlan, week_history: weekHistory, updated_at: new Date().toISOString()
-            };
-            const { data: existing } = await sb.from('user_sync_data').select('id').eq('user_id', currentUserId).single();
-            if (existing) await sb.from('user_sync_data').update(payload).eq('user_id', currentUserId);
-            else await sb.from('user_sync_data').insert(payload);
-            setSyncStatus('✅ ' + new Date().toLocaleTimeString() + ' kaydedildi');
-        } catch(e) { setSyncStatus('❌ Kayıt hatası!'); }
-        btn.disabled = false; btn.innerText = '☁️ KAYDET';
+        const status = document.getElementById('syncStatus');
+        btn.disabled = true;
+        btn.innerText = 'KAYDEDILIYOR...';
+        status.innerText = 'Senkronize ediliyor...';
+
+        const payload = {
+            sync: {
+                progress: userData,
+                trials: trialData,
+                weekPlan: weekPlan,
+                weekHistory: weekHistory,
+                theme: savedTheme
+            },
+            last_sync: new Date().toISOString()
+        };
+
+        supabase.from('seydios_bio_users').update(payload).eq('user_id', currentUser.user_id)
+            .then(res => {
+                if (res.error) throw res.error;
+                status.innerText = '✅ Kaydedildi: ' + new Date().toLocaleTimeString('tr-TR');
+                setTimeout(() => { status.innerText = ''; }, 3000);
+            })
+            .catch(e => {
+                status.innerText = '❌ Hata: ' + e.message;
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerText = 'KAYDET';
+            });
     }
 
-    function setSyncStatus(msg) {
-        const el = document.getElementById('syncStatus'); el.innerText = msg;
-        setTimeout(() => { el.innerText = ''; }, 4000);
+    function startCountdown() {
+        const target = new Date('2025-06-14T10:15:00');
+        setInterval(() => {
+            const now = new Date();
+            const diff = target - now;
+            if (diff <= 0) { document.getElementById('days').innerText = '0'; return; }
+            const d = Math.floor(diff / 864e5);
+            const h = Math.floor((diff % 864e5) / 36e5);
+            const m = Math.floor((diff % 36e5) / 6e4);
+            const s = Math.floor((diff % 6e4) / 1000);
+            document.getElementById('days').innerText = d;
+            document.getElementById('hours').innerText = h;
+            document.getElementById('minutes').innerText = m;
+            document.getElementById('seconds').innerText = s;
+        }, 1000);
     }
-
-    // Öğrenci fonksiyonları (toggleMenu, switchTab, updateStats, render... vs.) aynen Ayt_Biyoloji'deki gibi.
-    // Yer kısıtı nedeniyle tamamı burada, çalışan kopyadaki tüm fonksiyonlar eklendi. 
-    // Aşağıda özetlenmiş halleri var, gerçek uygulamada tüm fonksiyonlar mevcut.
-
-    function toggleMenu() { document.getElementById('sidebar').classList.toggle('open'); }
-    setInterval(() => {
-        const diff = new Date("June 21, 2026 10:15:00").getTime() - new Date().getTime();
-        document.getElementById('days').innerText = Math.max(0, Math.floor(diff / 86400000)).toString().padStart(2, '0');
-        document.getElementById('hours').innerText = Math.max(0, Math.floor((diff % 86400000) / 3600000)).toString().padStart(2, '0');
-        document.getElementById('mins').innerText = Math.max(0, Math.floor((diff % 3600000) / 60000)).toString().padStart(2, '0');
-    }, 1000);
 
     function switchTab(tab) {
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        document.querySelectorAll('.main > div').forEach(div => div.classList.add('hidden'));
+        
+        const tabMap = {
+            'GENEL': 0, 'KONULAR': 1, 'DENEME': 2, 'PROGRAM': 3,
+            'ISTATISTIK': 4, 'BASARIM': 5, 'AYARLAR': 6
+        };
+        document.querySelectorAll('.nav-item')[tabMap[tab]].classList.add('active');
+        
         activeTab = tab;
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(el => {
-            if (el.innerText.includes(tab === 'BİYOLOJİ' ? 'KONULAR' : tab)) el.classList.add('active');
-        });
-        const views = ['GENEL','BİYOLOJİ','DENEME','PROGRAM','ISTATISTIK','BASARIMLAR','AYARLAR'];
-        views.forEach(v => { const el = document.getElementById('view-' + v); if(el) el.style.display = 'none'; });
-        if (window.innerWidth <= 900) document.getElementById('sidebar').classList.remove('open');
-        document.getElementById('mainContent').scrollTop = 0;
+        if (tab === 'GENEL') {
+            document.getElementById('tabGENEL').classList.remove('hidden');
+            renderMainChart();
+            renderRadarChart();
+            updateKritikList();
+        } else if (tab === 'KONULAR') {
+            document.getElementById('tabKONULAR').classList.remove('hidden');
+            renderTopics();
+        } else if (tab === 'DENEME') {
+            document.getElementById('tabDENEME').classList.remove('hidden');
+            renderDenemeList();
+            renderDenemeLineChart();
+        } else if (tab === 'PROGRAM') {
+            document.getElementById('tabPROGRAM').classList.remove('hidden');
+            renderWeekPlan();
+        } else if (tab === 'ISTATISTIK') {
+            document.getElementById('tabISTATISTIK').classList.remove('hidden');
+            renderWeekStats();
+        } else if (tab === 'BASARIM') {
+            document.getElementById('tabBASARIM').classList.remove('hidden');
+            renderAchievements();
+        } else if (tab === 'AYARLAR') {
+            document.getElementById('tabAYARLAR').classList.remove('hidden');
+        }
+        
+        if (window.innerWidth <= 900) {
+            document.querySelector('.sidebar').classList.remove('open');
+        }
+    }
 
-        if (tab === 'GENEL') { document.getElementById('view-GENEL').style.display = 'block'; renderMainChart(); renderRadarChart(); }
-        else if (tab === 'BİYOLOJİ') { document.getElementById('view-BİYOLOJİ').style.display = 'block'; renderTopics(); }
-        else if (tab === 'DENEME') { document.getElementById('view-DENEME').style.display = 'block'; renderDenemeList(); renderDenemeLineChart(); }
-        else if (tab === 'PROGRAM') { document.getElementById('view-PROGRAM').style.display = 'block'; updateProgTopicList(); renderWeekPlan(); }
-        else if (tab === 'ISTATISTIK') { document.getElementById('view-ISTATISTIK').style.display = 'block'; renderWeekStats(); }
-        else if (tab === 'BASARIMLAR') { document.getElementById('view-BASARIMLAR').style.display = 'block'; renderAchievements(); }
-        else if (tab === 'AYARLAR') { document.getElementById('view-AYARLAR').style.display = 'block'; }
+    function updateStats() {
+        let total = Object.keys(userData).length;
+        let usta = Object.values(userData).filter(v => v == 3).length;
+        let bitti = Object.values(userData).filter(v => v == 2).length;
+        let calisiyor = Object.values(userData).filter(v => v == 1).length;
+        let progress = total > 0 ? Math.round((usta / bioTopics.length) * 100) : 0;
+        document.getElementById('totalProgress').innerText = `%${progress}`;
+
+        let potential = 0;
+        bioTopics.forEach((t, i) => {
+            let s = userData[`BİYOLOJİ-${i}`] || 0;
+            if (s === 3) potential += t.k ? 0.8 : 0.25;
+        });
+        document.getElementById('potentialScore').innerText = potential.toFixed(2);
+
+        if (trialData.length >= 2) {
+            let recent = trialData.slice(-3).map(t => t.bio || t.total || 0);
+            let avg = recent.reduce((a, b) => a + b, 0) / recent.length;
+            let prev = trialData.slice(-6, -3).map(t => t.bio || t.total || 0);
+            if (prev.length > 0) {
+                let prevAvg = prev.reduce((a, b) => a + b, 0) / prev.length;
+                let diff = avg - prevAvg;
+                let el = document.getElementById('trendValue');
+                el.innerText = `${diff >= 0 ? '+' : ''}${diff.toFixed(2)}`;
+                el.style.color = diff >= 0 ? 'var(--success)' : 'var(--danger)';
+            }
+        }
+    }
+
+    function renderMainChart() {
+        if (mainChartInstance) mainChartInstance.destroy();
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        let usta = Object.values(userData).filter(v => v == 3).length;
+        let bitti = Object.values(userData).filter(v => v == 2).length;
+        let calisiyor = Object.values(userData).filter(v => v == 1).length;
+        let bos = bioTopics.length - usta - bitti - calisiyor;
+
+        mainChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Usta', 'Bitti', 'Çalışıyor', 'Boş'],
+                datasets: [{
+                    data: [usta, bitti, calisiyor, bos],
+                    backgroundColor: ['#00ff88', '#00b3ff', '#ffb100', '#333'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#aaa', font: { size: 11 } } }
+                }
+            }
+        });
+    }
+
+    function renderRadarChart() {
+        if (radarChartInstance) radarChartInstance.destroy();
+        const sections = [
+            { name: 'Hücre', start: 1, end: 2 },
+            { name: 'Enerji', start: 3, end: 6 },
+            { name: 'Bitki', start: 7, end: 8 },
+            { name: 'Üreme', start: 9, end: 11 },
+            { name: 'Sinir', start: 13, end: 18 },
+            { name: 'Destek', start: 19, end: 24 },
+            { name: 'DNA', start: 25, end: 27 },
+            { name: 'Ekoloji', start: 28, end: 31 },
+            { name: 'Bağışıklık', start: 32, end: 35 },
+            { name: 'Evrim', start: 38, end: 38 }
+        ];
+
+        const radarData = sections.map(sec => {
+            let total = 0, count = 0;
+            for (let i = sec.start; i <= sec.end; i++) {
+                let s = userData[`BİYOLOJİ-${i}`] || 0;
+                total += (s / 3) * 100;
+                count++;
+            }
+            return count > 0 ? total / count : 0;
+        });
+
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        radarChartInstance = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: sections.map(s => s.name),
+                datasets: [{
+                    data: radarData,
+                    backgroundColor: `${savedTheme}33`,
+                    borderColor: savedTheme,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointBackgroundColor: savedTheme
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    r: {
+                        min: 0,
+                        max: 100,
+                        ticks: { display: false },
+                        grid: { color: '#333' },
+                        pointLabels: { color: '#aaa', font: { size: 9 } }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateKritikList() {
+        const list = document.getElementById('kritikList');
+        const kritikTopics = bioTopics.filter((t, i) => t.k && !userData[`BİYOLOJİ-${i}`]);
+        if (kritikTopics.length === 0) {
+            list.innerHTML = '<div style="color:var(--success); font-weight:bold;">✅ Tüm kritik konular tamamlandı!</div>';
+        } else {
+            list.innerHTML = kritikTopics.map(t => `<div style="padding:6px 0; border-bottom:1px solid #222;"><strong>🔴 ${t.n}</strong></div>`).join('');
+        }
+    }
+
+    function renderTopics() {
+        const container = document.getElementById('tabKONULAR');
+        let html = '';
+        
+        const kritikTopics = bioTopics.map((t, i) => ({ ...t, index: i })).filter(t => t.k);
+        const normalTopics = bioTopics.map((t, i) => ({ ...t, index: i })).filter(t => !t.k);
+
+        if (kritikTopics.length > 0) {
+            html += `<div class="topic-section">
+                <div class="section-header section-kritik">
+                    <span>🔴 KRİTİK KONULAR</span>
+                    <span style="font-size:11px; opacity:0.7;">${kritikTopics.length} Konu</span>
+                </div>
+                <div class="topic-grid">`;
+            kritikTopics.forEach(t => {
+                const s = userData[`BİYOLOJİ-${t.index}`] || 0;
+                html += `<div class="topic-card">
+                    <div class="topic-name">${t.n}</div>
+                    <div class="topic-icons">
+                        ${[3, 2, 1, 0].map(v => `<div class="status-icon st-${v} ${s === v ? 'active' : ''}" onclick="setStatus(${t.index}, ${v})">${v === 3 ? '✅' : v === 2 ? '📘' : v === 1 ? '⏳' : '❌'}</div>`).join('')}
+                    </div>
+                </div>`;
+            });
+            html += `</div></div>`;
+        }
+
+        html += `<div class="topic-section">
+            <div class="section-header">
+                <span>📚 TÜM KONULAR</span>
+                <span style="font-size:11px; opacity:0.7;">${normalTopics.length} Konu</span>
+            </div>
+            <div class="topic-grid">`;
+        normalTopics.forEach(t => {
+            const s = userData[`BİYOLOJİ-${t.index}`] || 0;
+            html += `<div class="topic-card">
+                <div class="topic-name">${t.n}</div>
+                <div class="topic-icons">
+                    ${[3, 2, 1, 0].map(v => `<div class="status-icon st-${v} ${s === v ? 'active' : ''}" onclick="setStatus(${t.index}, ${v})">${v === 3 ? '✅' : v === 2 ? '📘' : v === 1 ? '⏳' : '❌'}</div>`).join('')}
+                </div>
+            </div>`;
+        });
+        html += `</div></div>`;
+
+        container.innerHTML = html;
+    }
+
+    function setStatus(index, status) {
+        userData[`BİYOLOJİ-${index}`] = status;
+        updateStats();
+        if (activeTab === 'KONULAR') renderTopics();
+        if (activeTab === 'GENEL') {
+            renderMainChart();
+            renderRadarChart();
+            updateKritikList();
+        }
+    }
+
+    function addDeneme() {
+        const tarih = document.getElementById('dTarih').value;
+        const zorluk = document.getElementById('dZorluk').value;
+        const dogru = parseFloat(document.getElementById('dDogru').value) || 0;
+        const yanlis = parseFloat(document.getElementById('dYanlis').value) || 0;
+
+        if (!tarih) return alert('Tarih seçin!');
+        if (dogru < 0 || yanlis < 0) return alert('Geçersiz değer!');
+
+        const net = dogru - (yanlis / 4);
+        trialData.push({ date: tarih, diff: zorluk, bio: net, total: net, dogru, yanlis });
+        document.getElementById('dTarih').value = '';
+        document.getElementById('dDogru').value = '';
+        document.getElementById('dYanlis').value = '';
+
+        renderDenemeList();
+        renderDenemeLineChart();
         updateStats();
     }
 
-    // ... Diğer öğrenci fonksiyonları (renderTopics, saveDeneme, vs.) aynen kopyalandı.
-    // Tam kod için lütfen orijinal Ayt_Biyoloji.html'e bakın. Burada hepsini eklemek yanıtı aşırı uzatır.
+    function renderDenemeList() {
+        const container = document.getElementById('denemeList');
+        if (trialData.length === 0) {
+            container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:30px; color:#888;">Henüz deneme eklenmemiş.</div>';
+            return;
+        }
 
-    // ==================== ADMIN TARAFI (Admin_Biyoloji) ====================
-    let adminUsers = [];
+        container.innerHTML = [...trialData].reverse().map((t, i) => {
+            const realIndex = trialData.length - 1 - i;
+            const net = (t.bio || t.total || 0).toFixed(2);
+            return `
+                <div class="deneme-card">
+                    <button class="btn-del" onclick="deleteDeneme(${realIndex})">SİL</button>
+                    <div class="deneme-date">${t.date}</div>
+                    <div class="deneme-net">${net}</div>
+                    <div class="deneme-diff">${t.diff}</div>
+                    <div style="font-size:10px; color:#888; margin-top:8px;">D:${t.dogru || 0} Y:${t.yanlis || 0}</div>
+                </div>`;
+        }).join('');
+    }
+
+    function deleteDeneme(index) {
+        if (confirm('Bu denemeyi silmek istediğine emin misin?')) {
+            trialData.splice(index, 1);
+            renderDenemeList();
+            renderDenemeLineChart();
+            updateStats();
+        }
+    }
+
+    function renderDenemeLineChart() {
+        if (denemeChartInstance) denemeChartInstance.destroy();
+        const ctx = document.getElementById('denemeLineChart').getContext('2d');
+        
+        if (trialData.length === 0) {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.fillStyle = '#888';
+            ctx.font = '14px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Henüz deneme verisi yok', ctx.canvas.width / 2, ctx.canvas.height / 2);
+            return;
+        }
+
+        denemeChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trialData.map((_, i) => `D.${i + 1}`),
+                datasets: [{
+                    label: 'Biyo Net',
+                    data: trialData.map(t => t.bio || t.total || 0),
+                    borderColor: savedTheme,
+                    backgroundColor: `${savedTheme}33`,
+                    tension: 0.3,
+                    borderWidth: 3,
+                    fill: true,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { min: 0, grid: { color: '#222' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function updateProgTopicList() {
+        const sel = document.getElementById('prog-topic');
+        sel.innerHTML = bioTopics.map((t, i) => `<option value="${i}">${t.n}</option>`).join('');
+    }
+
+    function addTopicToProgram() {
+        const idx = document.getElementById('prog-topic').value;
+        if (weekPlan.find(p => p.key === idx)) return alert("Bu konu zaten programda var!");
+        weekPlan.push({ key: idx, done: false });
+        renderWeekPlan();
+    }
+
+    function toggleProgItem(index, isDone) {
+        weekPlan[index].done = isDone;
+        renderWeekPlan();
+    }
+
+    function removeProgItem(index) {
+        weekPlan.splice(index, 1);
+        renderWeekPlan();
+    }
+
+    function renderWeekPlan() {
+        const c = document.getElementById('prog-list');
+        c.innerHTML = '';
+        if (weekPlan.length === 0) {
+            c.innerHTML = '<div style="color:#888; text-align:center; padding:20px;">Program boş. Konular ekleyin.</div>';
+            return;
+        }
+        weekPlan.forEach((p, i) => {
+            const name = bioTopics[parseInt(p.key)]?.n || '?';
+            c.innerHTML += `
+                <div class="prog-item ${p.done ? 'done' : 'not-done'}">
+                    <div><strong>${name}</strong></div>
+                    <div>
+                        <button class="btn-status status-done" onclick="toggleProgItem(${i}, true)">✅</button>
+                        <button class="btn-status status-not" onclick="toggleProgItem(${i}, false)">❌</button>
+                        <button class="btn-del" style="margin-left:5px;" onclick="removeProgItem(${i})">SİL</button>
+                    </div>
+                </div>`;
+        });
+    }
+
+    function finishWeek() {
+        if (weekPlan.length === 0) return alert("Program boş!");
+        let doneCount = weekPlan.filter(p => p.done).length;
+        let rate = (doneCount / weekPlan.length) * 100;
+        weekHistory.push({
+            week: weekHistory.length + 1,
+            rate,
+            total: weekPlan.length,
+            done: doneCount,
+            date: new Date().toLocaleDateString()
+        });
+        weekPlan = [];
+        alert(`Hafta tamamlandı! Başarı: %${rate.toFixed(1)}`);
+        renderWeekPlan();
+        updateStats();
+        if (activeTab === "ISTATISTIK") renderWeekStats();
+    }
+
+    function renderWeekStats() {
+        const c = document.getElementById('weeklyHistoryList');
+        c.innerHTML = '';
+        if (weekHistory.length === 0) {
+            c.innerHTML = '<div style="color:#888; text-align:center; padding:20px;">Geçmiş haftalık kayıt bulunmuyor.</div>';
+            document.getElementById('lastWeekRate').innerText = '%0';
+            document.getElementById('weeklyTrend').innerText = 'Veri Yok';
+            document.getElementById('weeklyTrend').style.color = '#888';
+        } else {
+            [...weekHistory].reverse().forEach((h, i) => {
+                let realIdx = weekHistory.length - 1 - i;
+                c.innerHTML += `
+                    <div class="prog-item" style="border-color:${h.rate>=80?'var(--success)':(h.rate>=50?'var(--warning)':'var(--danger)')};">
+                        <div><strong>Hafta ${h.week}</strong> | ${h.date}<br><span style="font-size:10px; color:#888;">${h.done}/${h.total} Konu</span></div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:18px; font-weight:900; color:${h.rate>=80?'var(--success)':(h.rate>=50?'var(--warning)':'var(--danger)')}">%${h.rate.toFixed(1)}</span>
+                            <button class="btn-del" onclick="deleteWeekHistory(${realIdx})">SİL</button>
+                        </div>
+                    </div>`;
+            });
+            
+            let current = weekHistory[weekHistory.length - 1].rate;
+            document.getElementById('lastWeekRate').innerText = `%${current.toFixed(1)}`;
+            document.getElementById('lastWeekRate').style.color = current >= 80 ? 'var(--success)' : (current >= 50 ? 'var(--warning)' : 'var(--danger)');
+            
+            if (weekHistory.length >= 2) {
+                let diff = current - weekHistory[weekHistory.length - 2].rate;
+                let el = document.getElementById('weeklyTrend');
+                el.innerHTML = `${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%`;
+                el.style.color = diff >= 0 ? 'var(--success)' : 'var(--danger)';
+            } else {
+                document.getElementById('weeklyTrend').innerText = 'Veri Yok';
+                document.getElementById('weeklyTrend').style.color = '#888';
+            }
+        }
+
+        if (weekChartInstance) weekChartInstance.destroy();
+        const ctx = document.getElementById('weeklyChart').getContext('2d');
+        weekChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: weekHistory.map(h => `H.${h.week}`),
+                datasets: [{
+                    label: 'Başarı (%)',
+                    data: weekHistory.map(h => h.rate),
+                    borderColor: '#b829ff',
+                    backgroundColor: 'rgba(184,41,255,0.2)',
+                    tension: 0.3,
+                    borderWidth: 3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { min: 0, max: 100, grid: { color: '#222' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function deleteWeekHistory(index) {
+        if (confirm('Bu haftanın kaydını silmek istediğine emin misin?')) {
+            weekHistory.splice(index, 1);
+            weekHistory.forEach((h, i) => h.week = i + 1);
+            renderWeekStats();
+            updateStats();
+        }
+    }
+
+    function renderAchievements() {
+        const c = document.getElementById('achievementsContainer');
+        c.innerHTML = '';
+        let pot = parseFloat(document.getElementById('potentialScore').innerText);
+        let td = Object.values(userData).filter(v => v == 3).length;
+        let pct = parseInt(document.getElementById('totalProgress').innerText.replace('%', ''));
+        
+        let unl = {
+            a1: td > 0 || Object.values(userData).some(v => v >= 2),
+            a2: pct >= 50,
+            a3: pct >= 100,
+            a5: trialData.length >= 5,
+            a7: pot >= 6,
+            a8: pot >= 10,
+            a9: weekHistory.length > 0,
+            a10: weekHistory.some(h => h.rate === 100),
+            a11: weekHistory.length >= 3,
+            a12: weekHistory.length >= 5
+        };
+        
+        achievements.forEach(a => {
+            c.innerHTML += `<div class="ach-card ${unl[a.id] ? 'unlocked' : ''}">
+                <div style="font-size:30px;">${a.i}</div>
+                <div style="font-size:12px; color:var(--accent); font-weight:bold; margin:5px 0;">${a.t}</div>
+                <div style="font-size:10px; color:#888;">${a.d}</div>
+            </div>`;
+        });
+    }
+
+    function renderThemes() {
+        const themes = [
+            { color: '#00f2ff', name: 'Cyan' },
+            { color: '#ff00ff', name: 'Magenta' },
+            { color: '#00ff88', name: 'Green' },
+            { color: '#ffb100', name: 'Orange' },
+            { color: '#ff0055', name: 'Red' },
+            { color: '#b829ff', name: 'Purple' }
+        ];
+        
+        const bar = document.getElementById('themeBar');
+        bar.innerHTML = themes.map(t => 
+            `<div class="theme-dot ${savedTheme === t.color ? 'active' : ''}" 
+                  style="background-color: ${t.color};" 
+                  onclick="setTheme('${t.color}')" 
+                  title="${t.name}"></div>`
+        ).join('');
+    }
+
+    function setTheme(color) {
+        savedTheme = color;
+        document.documentElement.style.setProperty('--accent', color);
+        renderThemes();
+        updateStats();
+        if (activeTab === 'GENEL') {
+            renderMainChart();
+            renderRadarChart();
+        }
+        if (activeTab === 'DENEME') renderDenemeLineChart();
+    }
+
+    // ===== ÖĞRETMEN (ADMIN) SİSTEMİ KODLARI =====
+    const ADMIN_CREDENTIALS = { username: 'admin', password: 'seydios2025' };
+    let users = [];
     let selectedUser = null;
     let currentDetailTab = 'overview';
 
-    async function refreshAdminData() {
-        document.getElementById('userTableBody').innerHTML = '<tr><td colspan="9" class="loading">Yükleniyor...</td></tr>';
-        const { data: profiles, error: profError } = await sb.from('user_profiles').select('*');
-        if (profError) { alert('Profil hatası: ' + profError.message); return; }
-        const { data: syncs, error: syncError } = await sb.from('user_sync_data').select('*');
-        if (syncError) { alert('Sync hatası: ' + syncError.message); return; }
-        adminUsers = profiles.map(p => {
-            const sync = syncs.find(s => s.user_id === p.id) || {};
-            return { ...p, sync };
-        });
-        updateAdminStats();
-        renderUserTable();
-        closeDetail();
+    function handleTeacherLogin() {
+        const username = document.getElementById('teacherUsername').value.trim();
+        const password = document.getElementById('teacherPassword').value;
+        const err = document.getElementById('teacherLoginError');
+
+        if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+            document.getElementById('teacherLoginOverlay').classList.add('hidden');
+            document.getElementById('adminPanel').classList.remove('hidden');
+            if (!supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            loadUsers();
+        } else {
+            err.innerText = 'Kullanıcı adı veya şifre hatalı!';
+        }
+    }
+
+    function logoutTeacher() {
+        document.getElementById('adminPanel').classList.add('hidden');
+        document.getElementById('roleSelection').style.display = 'flex';
+        users = [];
+        selectedUser = null;
+    }
+
+    function loadUsers() {
+        supabase.from('seydios_bio_users').select('*').order('last_sync', { ascending: false })
+            .then(res => {
+                if (res.error) throw res.error;
+                users = res.data || [];
+                renderUserTable();
+                updateAdminStats();
+            })
+            .catch(e => alert('Veri yüklenirken hata: ' + e.message));
+    }
+
+    function refreshData() {
+        loadUsers();
+    }
+
+    function renderUserTable() {
+        const tbody = document.getElementById('userTableBody');
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="loading">Henüz kullanıcı yok</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = users.map(u => {
+            const sync = u.sync || {};
+            const progress = sync.progress || {};
+            const trials = sync.trials || [];
+            const potential = calcBioPotential(progress);
+            const completion = calcCompletion(progress);
+            const lastSync = u.last_sync ? new Date(u.last_sync).toLocaleString('tr-TR') : '-';
+
+            return `<tr onclick="showUserDetail('${u.user_id}')">
+                <td><strong>${u.ad} ${u.soyad}</strong></td>
+                <td>${u.username}</td>
+                <td><strong style="color:#00f2ff;">${potential.toFixed(1)}</strong></td>
+                <td>%${completion}</td>
+                <td>${trials.length}</td>
+                <td style="font-size:11px; color:#888;">${lastSync}</td>
+            </tr>`;
+        }).join('');
     }
 
     function calcBioPotential(progress) {
         let pot = 0;
         bioTopics.forEach((t, i) => {
             const s = progress[`BİYOLOJİ-${i}`] || 0;
-            if (s === 3) pot += t.w;
-            else if (s === 2) pot += t.w * 0.65;
+            if (s === 3) pot += t.k ? 0.8 : 0.25;
         });
-        return Math.min(13, pot);
+        return pot;
     }
 
-    function calcBioProgress(progress) {
-        let done = 0;
-        bioTopics.forEach((_, i) => { if ((progress[`BİYOLOJİ-${i}`] || 0) >= 2) done++; });
-        return bioTopics.length ? (done / bioTopics.length) * 100 : 0;
-    }
-
-    function calcLast3Avg(trials) {
-        if (!trials || trials.length === 0) return null;
-        const last3 = [...trials].slice(-3);
-        return last3.reduce((a, t) => a + (t.bio || t.total || 0), 0) / last3.length;
+    function calcCompletion(progress) {
+        const usta = Object.values(progress).filter(v => v == 3).length;
+        return Math.round((usta / bioTopics.length) * 100);
     }
 
     function updateAdminStats() {
-        document.getElementById('totalUsers').innerText = adminUsers.length;
-        if (adminUsers.length === 0) return;
-        let totalPot = 0, totalProg = 0, maxNet = 0, totalAvg3 = 0, avg3Count = 0;
-        adminUsers.forEach(u => {
-            const prog = u.sync?.progress || {};
-            const pot = calcBioPotential(prog);
-            totalPot += pot;
-            totalProg += calcBioProgress(prog);
-            const trials = u.sync?.trials || [];
-            if (trials.length) maxNet = Math.max(maxNet, ...trials.map(t => t.bio || t.total || 0));
-            const avg3 = calcLast3Avg(trials);
-            if (avg3 !== null) { totalAvg3 += avg3; avg3Count++; }
-        });
-        document.getElementById('avgPotential').innerText = (totalPot / adminUsers.length).toFixed(1);
-        document.getElementById('avgProgress').innerText = '%' + Math.round(totalProg / adminUsers.length);
-        document.getElementById('maxNet').innerText = maxNet.toFixed(2);
-        document.getElementById('avgLast3Net').innerText = avg3Count > 0 ? (totalAvg3 / avg3Count).toFixed(2) : '-';
+        document.getElementById('totalUsers').innerText = users.length;
+        
+        if (users.length === 0) {
+            document.getElementById('avgPotential').innerText = '-';
+            document.getElementById('avgProgress').innerText = '-';
+            document.getElementById('maxNet').innerText = '-';
+            document.getElementById('avgLast3Net').innerText = '-';
+            return;
+        }
+
+        const potentials = users.map(u => calcBioPotential(u.sync?.progress || {}));
+        const avgPot = potentials.reduce((a, b) => a + b, 0) / potentials.length;
+        document.getElementById('avgPotential').innerText = avgPot.toFixed(1);
+
+        const completions = users.map(u => calcCompletion(u.sync?.progress || {}));
+        const avgComp = completions.reduce((a, b) => a + b, 0) / completions.length;
+        document.getElementById('avgProgress').innerText = `%${avgComp.toFixed(0)}`;
+
+        const maxPot = Math.max(...potentials);
+        document.getElementById('maxNet').innerText = maxPot.toFixed(1);
+
+        const allTrials = users.flatMap(u => (u.sync?.trials || []).slice(-3).map(t => t.bio || t.total || 0));
+        if (allTrials.length > 0) {
+            const avgLast3 = allTrials.reduce((a, b) => a + b, 0) / allTrials.length;
+            document.getElementById('avgLast3Net').innerText = avgLast3.toFixed(1);
+        } else {
+            document.getElementById('avgLast3Net').innerText = '-';
+        }
     }
 
-    function renderUserTable() {
-        const tbody = document.getElementById('userTableBody');
-        if (adminUsers.length === 0) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;">Henüz kullanıcı yok</td></tr>'; return; }
-        const sorted = [...adminUsers].sort((a, b) => calcBioPotential(b.sync?.progress||{}) - calcBioPotential(a.sync?.progress||{}));
-        tbody.innerHTML = sorted.map((u, idx) => {
-            const prog = u.sync?.progress || {};
-            const pot = calcBioPotential(prog);
-            const bioProgress = calcBioProgress(prog);
-            const trials = u.sync?.trials || [];
-            const lastBio = trials.length ? (trials[trials.length-1].bio || trials[trials.length-1].total || 0).toFixed(2) : '-';
-            const avg3 = calcLast3Avg(trials);
-            const updated = u.sync?.updated_at ? new Date(u.sync.updated_at).toLocaleDateString('tr') : '-';
-            let rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : '';
-            return `<tr onclick="selectUser('${u.id}')">
-                <td><span class="rank-badge ${rankClass}">${idx+1}</span></td>
-                <td><strong>${u.ad_soyad}</strong></td>
-                <td>${u.okul_no}</td>
-                <td>${u.sinif}-${u.sube}</td>
-                <td><span style="color:#00f2ff;font-weight:bold;">${pot.toFixed(1)}</span></td>
-                <td>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <div class="progress-bar"><div class="progress-fill" style="width:${bioProgress}%;"></div></div>
-                        <span>%${Math.round(bioProgress)}</span>
-                    </div>
-                </td>
-                <td>${lastBio}</td>
-                <td>${avg3 !== null ? avg3.toFixed(2) : '-'}</td>
-                <td>${updated}</td>
-            </tr>`;
-        }).join('');
-    }
-
-    window.selectUser = function(userId) {
-        selectedUser = adminUsers.find(u => u.id === userId);
-        if (!selectedUser) return;
+    function showUserDetail(userId) {
+        const user = users.find(u => u.user_id === userId);
+        if (!user) return;
+        
+        selectedUser = user;
         document.getElementById('detailPanel').style.display = 'block';
-        document.getElementById('detailUserName').innerText = `${selectedUser.ad_soyad} (${selectedUser.okul_no})`;
+        document.getElementById('detailUserName').innerText = `${user.ad} ${user.soyad} (@${user.username})`;
+        
         currentDetailTab = 'overview';
-        document.querySelectorAll('#adminPanel .tab').forEach(t => t.classList.remove('active'));
-        document.querySelector('#adminPanel .tab').classList.add('active');
-        renderDetailContent();
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector('.tab').classList.add('active');
+        
+        renderUserDetailTab();
         document.getElementById('detailPanel').scrollIntoView({ behavior: 'smooth' });
-    };
+    }
 
-    window.closeDetail = function() {
+    function closeDetail() {
         document.getElementById('detailPanel').style.display = 'none';
         selectedUser = null;
-    };
-
-    window.switchDetailTab = function(tab, el) {
-        currentDetailTab = tab;
-        document.querySelectorAll('#adminPanel .tab').forEach(t => t.classList.remove('active'));
-        el.classList.add('active');
-        renderDetailContent();
-    };
-
-    // renderDetailContent ve analyzeAll fonksiyonları aynen Admin_Biyoloji'deki gibi.
-    // ... (uzunluk sebebiyle burada tamamı yok, çalışan kopyada mevcut)
-
-    // Analiz butonu
-    window.analyzeAll = function() {
-        if (adminUsers.length === 0) return alert('Kullanıcı yok');
-        document.getElementById('analysisPanel').style.display = 'block';
-        // analiz içeriği...
-    };
-
-    // Otomatik admin giriş kontrolü
-    if (localStorage.getItem('admin_bio_auth') === 'true') {
-        document.getElementById('roleSelectionOverlay').style.display = 'none';
-        document.getElementById('adminPanel').style.display = 'block';
-        refreshAdminData();
     }
+
+    function switchDetailTab(tab) {
+        currentDetailTab = tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+        renderUserDetailTab();
+    }
+
+    function renderUserDetailTab() {
+        const container = document.getElementById('detailContent');
+        if (!selectedUser) return;
+
+        const sync = selectedUser.sync || {};
+        const progress = sync.progress || {};
+        const trials = sync.trials || [];
+        const weekHistory = sync.weekHistory || [];
+
+        if (currentDetailTab === 'overview') {
+            const potential = calcBioPotential(progress);
+            const completion = calcCompletion(progress);
+            const usta = Object.values(progress).filter(v => v == 3).length;
+            const bitti = Object.values(progress).filter(v => v == 2).length;
+            const calisiyor = Object.values(progress).filter(v => v == 1).length;
+
+            const sections = [
+                { name: 'Hücre', start: 1, end: 2 },
+                { name: 'Enerji', start: 3, end: 6 },
+                { name: 'Bitki', start: 7, end: 8 },
+                { name: 'Üreme', start: 9, end: 11 },
+                { name: 'Sinir', start: 13, end: 18 },
+                { name: 'Destek', start: 19, end: 24 },
+                { name: 'DNA', start: 25, end: 27 },
+                { name: 'Ekoloji', start: 28, end: 31 },
+                { name: 'Bağışıklık', start: 32, end: 35 },
+                { name: 'Evrim', start: 38, end: 38 }
+            ];
+
+            const radarData = sections.map(sec => {
+                let total = 0, count = 0;
+                for (let i = sec.start; i <= sec.end; i++) {
+                    let s = progress[`BİYOLOJİ-${i}`] || 0;
+                    total += (s / 3) * 100;
+                    count++;
+                }
+                return count > 0 ? total / count : 0;
+            });
+            const radarLabels = sections.map(s => s.name);
+
+            container.innerHTML = `
+                <div class="analysis-cards">
+                    <div>
+                        <div class="card-title">📊 Genel Durum</div>
+                        <div style="padding: 10px 0;">
+                            <div style="margin-bottom: 12px;">
+                                <div style="font-size: 11px; color: #888; margin-bottom: 4px;">Potansiyel Biyo Net</div>
+                                <div style="font-size: 28px; font-weight: 900; color: #00f2ff;">${potential.toFixed(1)}</div>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <div style="font-size: 11px; color: #888; margin-bottom: 4px;">Tamamlama Oranı</div>
+                                <div style="font-size: 22px; font-weight: 900; color: #00ff88;">%${completion}</div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                                <div style="background: #002211; padding: 10px; border-radius: 8px;">
+                                    <div style="font-size: 10px; color: #888;">Usta</div>
+                                    <div style="font-size: 18px; font-weight: 900; color: #00ff88;">${usta}</div>
+                                </div>
+                                <div style="background: #001122; padding: 10px; border-radius: 8px;">
+                                    <div style="font-size: 10px; color: #888;">Bitti</div>
+                                    <div style="font-size: 18px; font-weight: 900; color: #00b3ff;">${bitti}</div>
+                                </div>
+                                <div style="background: #221100; padding: 10px; border-radius: 8px;">
+                                    <div style="font-size: 10px; color: #888;">Çalışıyor</div>
+                                    <div style="font-size: 18px; font-weight: 900; color: #ffb100;">${calisiyor}</div>
+                                </div>
+                                <div style="background: #110000; padding: 10px; border-radius: 8px;">
+                                    <div style="font-size: 10px; color: #888;">Deneme</div>
+                                    <div style="font-size: 18px; font-weight: 900; color: #00f2ff;">${trials.length}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card-title">🎯 Konu Dağılımı</div>
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="userRadarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                ${trials.length > 0 ? `
+                <div style="margin-top: 16px;">
+                    <div class="card-title">📈 Deneme Performansı</div>
+                    <div style="height: 200px; position: relative; margin-top: 10px;">
+                        <canvas id="userTrialChart"></canvas>
+                    </div>
+                </div>` : ''}
+            `;
+
+            setTimeout(() => {
+                if (trials.length) {
+                    const ctx1 = document.getElementById('userTrialChart').getContext('2d');
+                    new Chart(ctx1, {
+                        type: 'line',
+                        data: {
+                            labels: trials.map((_, i) => `D.${i + 1}`),
+                            datasets: [{
+                                label: 'Biyo Net',
+                                data: trials.map(t => t.bio || t.total || 0),
+                                borderColor: '#00f2ff',
+                                backgroundColor: 'rgba(0,242,255,0.1)',
+                                tension: 0.3,
+                                fill: true,
+                                pointRadius: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { min: 0, grid: { color: '#222' } },
+                                x: { grid: { display: false } }
+                            }
+                        }
+                    });
+                }
+
+                const ctx2 = document.getElementById('userRadarChart').getContext('2d');
+                new Chart(ctx2, {
+                    type: 'radar',
+                    data: {
+                        labels: radarLabels,
+                        datasets: [{
+                            data: radarData,
+                            backgroundColor: 'rgba(0,242,255,0.2)',
+                            borderColor: '#00f2ff',
+                            borderWidth: 2,
+                            pointRadius: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            r: {
+                                min: 0,
+                                max: 100,
+                                grid: { color: '#333' },
+                                ticks: { display: false },
+                                pointLabels: { color: '#aaa', font: { size: 9 } }
+                            }
+                        }
+                    }
+                });
+            }, 100);
+        }
+        else if (currentDetailTab === 'topics') {
+            let html = '<div class="topic-list">';
+            bioTopics.forEach((t, i) => {
+                const s = progress[`BİYOLOJİ-${i}`] || 0;
+                const cls = s === 3 ? 's-usta' : s === 2 ? 's-bitti' : s === 1 ? 's-calisiyor' : 's-bos';
+                const status = s === 3 ? '✅ Usta' : s === 2 ? '📘 Bitti' : s === 1 ? '⏳ Çalışıyor' : '❌ Boş';
+                html += `<div class="topic-item">
+                    <span>${t.k ? '🔴 ' : ''}<strong>${t.n}</strong></span>
+                    <span class="${cls}">${status}</span>
+                </div>`;
+            });
+            container.innerHTML = html + '</div>';
+        }
+        else if (currentDetailTab === 'trials') {
+            if (!trials.length) {
+                container.innerHTML = '<p style="color:#888; padding:20px 0;">Deneme kaydı yok.</p>';
+            } else {
+                let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <tr style="color:#aaa;border-bottom:1px solid #333;">
+                        <th style="padding:8px;text-align:left;">Tarih</th>
+                        <th style="padding:8px;">Zorluk</th>
+                        <th style="padding:8px;">Biyo Net</th>
+                    </tr>`;
+                [...trials].reverse().forEach(t => {
+                    const bio = (t.bio || t.total || 0).toFixed(2);
+                    html += `<tr style="border-bottom:1px solid #222;">
+                        <td style="padding:8px;">${t.date}</td>
+                        <td style="padding:8px;text-align:center;">${t.diff}</td>
+                        <td style="padding:8px;text-align:center;"><strong style="color:#00f2ff;">${bio}</strong></td>
+                    </tr>`;
+                });
+                container.innerHTML = html + '</table>';
+            }
+        }
+        else if (currentDetailTab === 'weeks') {
+            if (!weekHistory.length) {
+                container.innerHTML = '<p style="color:#888; padding:20px 0;">Haftalık kayıt yok.</p>';
+            } else {
+                let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <tr style="color:#aaa;border-bottom:1px solid #333;">
+                        <th style="padding:8px;text-align:left;">Hafta</th>
+                        <th style="padding:8px;">Tarih</th>
+                        <th style="padding:8px;">Başarı</th>
+                        <th style="padding:8px;">Tamamlanan</th>
+                    </tr>`;
+                [...weekHistory].reverse().forEach(w => {
+                    html += `<tr style="border-bottom:1px solid #222;">
+                        <td style="padding:8px;">${w.week}</td>
+                        <td style="padding:8px;">${w.date}</td>
+                        <td style="padding:8px;text-align:center;"><strong style="color:${w.rate >= 80 ? '#00ff88' : w.rate >= 50 ? '#ffb100' : '#ff4d4d'};">%${w.rate.toFixed(1)}</strong></td>
+                        <td style="padding:8px;text-align:center;">${w.done}/${w.total}</td>
+                    </tr>`;
+                });
+                container.innerHTML = html + '</table>';
+            }
+        }
+    }
+
+    window.analyzeAll = function() {
+        if (users.length === 0) return alert('Kullanıcı yok');
+        document.getElementById('analysisPanel').style.display = 'block';
+
+        const topicCount = {};
+        users.forEach(u => {
+            const prog = u.sync?.progress || {};
+            bioTopics.forEach((t, i) => {
+                const s = prog[`BİYOLOJİ-${i}`] || 0;
+                if (s < 2) topicCount[i] = (topicCount[i] || 0) + 1;
+            });
+        });
+        const sorted = Object.entries(topicCount).sort((a, b) => b[1] - a[1]);
+
+        const ranked = [...users].sort((a, b) => 
+            calcBioPotential(b.sync?.progress || {}) - calcBioPotential(a.sync?.progress || {})
+        );
+
+        const potentials = users.map(u => calcBioPotential(u.sync?.progress || {})).filter(v => v > 0);
+        const avg = potentials.length ? potentials.reduce((a, b) => a + b, 0) / potentials.length : 0;
+
+        let html = `
+        <div class="analysis-cards">
+            <div>
+                <div class="card-title">🔍 En Çok Eksik Biyoloji Konuları</div>
+                <div class="topic-list">`;
+        sorted.forEach(([idx, count]) => {
+            const t = bioTopics[parseInt(idx)];
+            const pct = ((count / users.length) * 100).toFixed(0);
+            html += `<div class="topic-item">
+                <span>${t.k ? '🔴 ' : ''}<strong>${t.n}</strong></span>
+                <span style="color:#ff4d4d;">${count} kişi (%${pct})</span>
+            </div>`;
+        });
+        html += `</div></div>
+            <div>
+                <div class="card-title">🏆 Sıralama (Pot. Biyo Net)</div>
+                <div class="topic-list">`;
+        ranked.forEach((u, i) => {
+            const pot = calcBioPotential(u.sync?.progress || {});
+            let rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+            html += `<div class="topic-item">
+                <span><span class="rank-badge ${rankClass}">${i + 1}</span> &nbsp;${u.ad} ${u.soyad}</span>
+                <span style="color:#00f2ff; font-weight:bold;">${pot.toFixed(1)} net</span>
+            </div>`;
+        });
+        html += `</div></div>
+        </div>
+        <div style="margin-top:16px; padding:12px; background:#1a1a20; border-radius:8px; font-size:13px; color:#aaa;">
+            📊 Sınıf Ortalaması: <strong style="color:#00f2ff;">${avg.toFixed(2)}</strong> potansiyel biyo net &nbsp;|&nbsp; 
+            ${users.length} öğrenci
+        </div>`;
+        document.getElementById('analysisContent').innerHTML = html;
+        document.getElementById('analysisPanel').scrollIntoView({ behavior: 'smooth' });
+    };
 </script>
 </body>
 </html>
